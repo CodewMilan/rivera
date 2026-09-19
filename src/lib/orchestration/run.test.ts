@@ -87,6 +87,29 @@ describe("phase 2 orchestrator", () => {
     expect(next.error).toMatch(/step count/);
   });
 
+  it("returns immediately when a human approval is already pending", async () => {
+    const store = createMemoryStore();
+    const org = await createOrganizationFromIntake(store, intake());
+    const { requestApproval } = await import("@/lib/approvals/engine");
+    await requestApproval(store, {
+      organizationId: org.id,
+      actionType: "spend_budget",
+      targetId: "media-1",
+      summary: "Spend on video",
+    });
+    const run = await createAndStartRun(
+      {
+        store,
+        llm: new FakeLLMProvider(() => "not-json"),
+        search: new FakeSearchProvider(),
+        media: new FakeHiggsfieldProvider(),
+      },
+      org.id,
+    );
+    expect(run.status).toBe("intake");
+    expect(await store.listAgents(org.id)).toHaveLength(0);
+  });
+
   it("stops when cancelled", async () => {
     const store = createMemoryStore();
     const org = await createOrganizationFromIntake(store, intake());

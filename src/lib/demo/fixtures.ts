@@ -1,4 +1,8 @@
+import type { z } from "zod";
+import type { ceoPlanSchema } from "@/lib/agents/schema";
 import type { AgentType, ContentPlatform } from "@/types";
+
+export type DemoCeoPlan = z.infer<typeof ceoPlanSchema>;
 
 export const AGENT_ROSTER: Array<{
   type: AgentType;
@@ -56,7 +60,7 @@ export const AGENT_ROSTER: Array<{
   },
 ];
 
-export function demoCeoPlan(goal: string) {
+export function demoCeoPlan(goal: string): DemoCeoPlan {
   const stellar = /stellar|soroban/i.test(goal);
   return {
     organizationName: stellar ? "Trace" : "Rivera Launch",
@@ -69,7 +73,7 @@ export function demoCeoPlan(goal: string) {
       : "Ship the smallest demoable wedge, then charge for hosted convenience.",
     confidence: 0.78,
     agents: AGENT_ROSTER.filter((agent) => agent.type !== "ceo").map((agent) => ({
-      type: agent.type,
+      type: agent.type as Exclude<AgentType, "ceo">,
       objective: agent.objective,
       tools: agent.tools,
     })),

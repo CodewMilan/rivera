@@ -22,6 +22,10 @@ function row<T>(result: { data: T }[] | undefined): T | undefined {
   return result?.[0]?.data;
 }
 
+function jsonValue(sql: Sql, value: unknown) {
+  return sql.json(JSON.parse(JSON.stringify(value)));
+}
+
 export async function migratePostgres(sql: Sql): Promise<void> {
   const schemaPath = path.join(process.cwd(), "src/lib/database/schema.sql");
   const schema = readFileSync(schemaPath, "utf8");
@@ -31,7 +35,7 @@ export async function migratePostgres(sql: Sql): Promise<void> {
 export function createPostgresStore(sql: Sql): Store {
   return {
     async createOrganization(org) {
-      await sql`INSERT INTO organizations (id, data) VALUES (${org.id}, ${sql.json(org)})`;
+      await sql`INSERT INTO organizations (id, data) VALUES (${org.id}, ${jsonValue(sql, org)})`;
       return org;
     },
     async getOrganization(id) {
@@ -42,7 +46,7 @@ export function createPostgresStore(sql: Sql): Store {
       const current = await this.getOrganization(id);
       if (!current) throw new Error("Organization not found");
       const next = { ...current, ...patch };
-      await sql`UPDATE organizations SET data = ${sql.json(next)} WHERE id = ${id}`;
+      await sql`UPDATE organizations SET data = ${jsonValue(sql, next)} WHERE id = ${id}`;
       return next;
     },
     async listOrganizations() {
@@ -51,7 +55,7 @@ export function createPostgresStore(sql: Sql): Store {
     },
 
     async createRun(run) {
-      await sql`INSERT INTO runs (id, organization_id, started_at, data) VALUES (${run.id}, ${run.organizationId}, ${run.startedAt}, ${sql.json(run)})`;
+      await sql`INSERT INTO runs (id, organization_id, started_at, data) VALUES (${run.id}, ${run.organizationId}, ${run.startedAt}, ${jsonValue(sql, run)})`;
       return run;
     },
     async getRun(id) {
@@ -71,12 +75,12 @@ export function createPostgresStore(sql: Sql): Store {
       const current = await this.getRun(id);
       if (!current) throw new Error("Run not found");
       const next = { ...current, ...patch };
-      await sql`UPDATE runs SET data = ${sql.json(next)} WHERE id = ${id}`;
+      await sql`UPDATE runs SET data = ${jsonValue(sql, next)} WHERE id = ${id}`;
       return next;
     },
 
     async createAgent(agent) {
-      await sql`INSERT INTO agents (id, organization_id, data) VALUES (${agent.id}, ${agent.organizationId}, ${sql.json(agent)})`;
+      await sql`INSERT INTO agents (id, organization_id, data) VALUES (${agent.id}, ${agent.organizationId}, ${jsonValue(sql, agent)})`;
       return agent;
     },
     async getAgent(id) {
@@ -91,12 +95,12 @@ export function createPostgresStore(sql: Sql): Store {
       const current = await this.getAgent(id);
       if (!current) throw new Error("Agent not found");
       const next = { ...current, ...patch };
-      await sql`UPDATE agents SET data = ${sql.json(next)} WHERE id = ${id}`;
+      await sql`UPDATE agents SET data = ${jsonValue(sql, next)} WHERE id = ${id}`;
       return next;
     },
 
     async createTask(task) {
-      await sql`INSERT INTO tasks (id, organization_id, run_id, data) VALUES (${task.id}, ${task.organizationId}, ${task.runId}, ${sql.json(task)})`;
+      await sql`INSERT INTO tasks (id, organization_id, run_id, data) VALUES (${task.id}, ${task.organizationId}, ${task.runId}, ${jsonValue(sql, task)})`;
       return task;
     },
     async getTask(id) {
@@ -115,12 +119,12 @@ export function createPostgresStore(sql: Sql): Store {
       const current = await this.getTask(id);
       if (!current) throw new Error("Task not found");
       const next = { ...current, ...patch };
-      await sql`UPDATE tasks SET data = ${sql.json(next)} WHERE id = ${id}`;
+      await sql`UPDATE tasks SET data = ${jsonValue(sql, next)} WHERE id = ${id}`;
       return next;
     },
 
     async appendEvent(event) {
-      await sql`INSERT INTO events (id, organization_id, run_id, created_at, data) VALUES (${event.id}, ${event.organizationId}, ${event.runId ?? null}, ${event.createdAt}, ${sql.json(event)})`;
+      await sql`INSERT INTO events (id, organization_id, run_id, created_at, data) VALUES (${event.id}, ${event.organizationId}, ${event.runId ?? null}, ${event.createdAt}, ${jsonValue(sql, event)})`;
       return event;
     },
     async listEvents(organizationId) {
@@ -137,7 +141,7 @@ export function createPostgresStore(sql: Sql): Store {
     },
 
     async createDecision(decision) {
-      await sql`INSERT INTO decisions (id, organization_id, data) VALUES (${decision.id}, ${decision.organizationId}, ${sql.json(decision)})`;
+      await sql`INSERT INTO decisions (id, organization_id, data) VALUES (${decision.id}, ${decision.organizationId}, ${jsonValue(sql, decision)})`;
       return decision;
     },
     async getDecision(id) {
@@ -152,12 +156,12 @@ export function createPostgresStore(sql: Sql): Store {
       const current = await this.getDecision(id);
       if (!current) throw new Error("Decision not found");
       const next = { ...current, ...patch };
-      await sql`UPDATE decisions SET data = ${sql.json(next)} WHERE id = ${id}`;
+      await sql`UPDATE decisions SET data = ${jsonValue(sql, next)} WHERE id = ${id}`;
       return next;
     },
 
     async createApproval(approval) {
-      await sql`INSERT INTO approvals (id, organization_id, target_id, action_type, status, data) VALUES (${approval.id}, ${approval.organizationId}, ${approval.targetId}, ${approval.actionType}, ${approval.status}, ${sql.json(approval)})`;
+      await sql`INSERT INTO approvals (id, organization_id, target_id, action_type, status, data) VALUES (${approval.id}, ${approval.organizationId}, ${approval.targetId}, ${approval.actionType}, ${approval.status}, ${jsonValue(sql, approval)})`;
       return approval;
     },
     async getApproval(id) {
@@ -187,12 +191,12 @@ export function createPostgresStore(sql: Sql): Store {
       const current = await this.getApproval(id);
       if (!current) throw new Error("Approval not found");
       const next = { ...current, ...patch };
-      await sql`UPDATE approvals SET status = ${next.status}, data = ${sql.json(next)} WHERE id = ${id}`;
+      await sql`UPDATE approvals SET status = ${next.status}, data = ${jsonValue(sql, next)} WHERE id = ${id}`;
       return next;
     },
 
     async createMediaJob(job) {
-      await sql`INSERT INTO media_jobs (id, organization_id, provider_job_id, data) VALUES (${job.id}, ${job.organizationId}, ${job.providerJobId}, ${sql.json(job)})`;
+      await sql`INSERT INTO media_jobs (id, organization_id, provider_job_id, data) VALUES (${job.id}, ${job.organizationId}, ${job.providerJobId}, ${jsonValue(sql, job)})`;
       return job;
     },
     async getMediaJob(id) {
@@ -211,12 +215,12 @@ export function createPostgresStore(sql: Sql): Store {
       const current = await this.getMediaJob(id);
       if (!current) throw new Error("Media job not found");
       const next = { ...current, ...patch };
-      await sql`UPDATE media_jobs SET data = ${sql.json(next)} WHERE id = ${id}`;
+      await sql`UPDATE media_jobs SET data = ${jsonValue(sql, next)} WHERE id = ${id}`;
       return next;
     },
 
     async createAsset(asset) {
-      await sql`INSERT INTO assets (id, organization_id, data) VALUES (${asset.id}, ${asset.organizationId}, ${sql.json(asset)})`;
+      await sql`INSERT INTO assets (id, organization_id, data) VALUES (${asset.id}, ${asset.organizationId}, ${jsonValue(sql, asset)})`;
       return asset;
     },
     async getAsset(id) {
@@ -229,7 +233,7 @@ export function createPostgresStore(sql: Sql): Store {
     },
 
     async createCampaign(campaign) {
-      await sql`INSERT INTO campaigns (id, organization_id, data) VALUES (${campaign.id}, ${campaign.organizationId}, ${sql.json(campaign)})`;
+      await sql`INSERT INTO campaigns (id, organization_id, data) VALUES (${campaign.id}, ${campaign.organizationId}, ${jsonValue(sql, campaign)})`;
       return campaign;
     },
     async getCampaign(id) {
@@ -242,7 +246,7 @@ export function createPostgresStore(sql: Sql): Store {
     },
 
     async createContentItem(item) {
-      await sql`INSERT INTO content_items (id, organization_id, campaign_id, data) VALUES (${item.id}, ${item.organizationId}, ${item.campaignId}, ${sql.json(item)})`;
+      await sql`INSERT INTO content_items (id, organization_id, campaign_id, data) VALUES (${item.id}, ${item.organizationId}, ${item.campaignId}, ${jsonValue(sql, item)})`;
       return item;
     },
     async getContentItem(id) {
@@ -261,15 +265,15 @@ export function createPostgresStore(sql: Sql): Store {
       const current = await this.getContentItem(id);
       if (!current) throw new Error("Content item not found");
       const next = { ...current, ...patch };
-      await sql`UPDATE content_items SET data = ${sql.json(next)} WHERE id = ${id}`;
+      await sql`UPDATE content_items SET data = ${jsonValue(sql, next)} WHERE id = ${id}`;
       return next;
     },
 
     async saveReport(report) {
       await sql`
         INSERT INTO reports (organization_id, data)
-        VALUES (${report.organizationId}, ${sql.json(report)})
-        ON CONFLICT (organization_id) DO UPDATE SET data = ${sql.json(report)}
+        VALUES (${report.organizationId}, ${jsonValue(sql, report)})
+        ON CONFLICT (organization_id) DO UPDATE SET data = ${jsonValue(sql, report)}
       `;
       return report;
     },

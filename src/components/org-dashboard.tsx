@@ -359,7 +359,7 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+function Panel({ title, children }: { title: string; children: import("react").ReactNode }) {
   return (
     <section className="rounded-xl border border-border bg-card p-5">
       <h2 className="text-sm font-medium">{title}</h2>
