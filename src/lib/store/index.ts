@@ -11,9 +11,8 @@ let memoryStore = createMemoryStore();
 
 export function useMemoryStore(): boolean {
   if (process.env.RIVERA_STORE === "memory") return true;
-  if (process.env.VITEST) return true;
-  if (!process.env.DATABASE_URL) return true;
-  return false;
+  if (process.env.RIVERA_STORE === "postgres") return false;
+  return !process.env.DATABASE_URL;
 }
 
 export async function getStore(): Promise<Store> {

@@ -6,7 +6,7 @@ test("founder can submit a goal and reach a Rivera organization", async ({ page 
   await page.getByLabel(/Goal/i).fill(
     "Build a developer tool that helps Stellar developers debug Soroban transactions in 30 days with a $500 budget.",
   );
-  await page.getByRole("button", { name: /Start Rivera/i }).click();
+  await page.getByRole("button", { name: /Create organization/i }).click();
   await page.waitForURL(/\/organizations\//, { timeout: 45_000 });
   await expect(page.getByText(/Budget used/i)).toBeVisible();
 });

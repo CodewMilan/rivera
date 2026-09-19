@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "migrate": "tsx src/lib/database/migrate.ts"
+    "migrate": "tsx --env-file=.env src/lib/database/migrate.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",

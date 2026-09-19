@@ -67,9 +67,9 @@
   --color-ring: var(--ring);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
-  --font-sans: var(--font-sans);
-  --font-serif: var(--font-serif);
-  --font-mono: var(--font-mono);
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-serif: ui-serif, Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -89,7 +89,7 @@ body {
 }
 
 body {
-  font-family: var(--font-sans), sans-serif;
+  font-family: ui-sans-serif, system-ui, sans-serif;
   min-height: 100vh;
 }
 

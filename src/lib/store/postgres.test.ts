@@ -1,23 +1,58 @@
 import postgres from "postgres";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createOrganizationFromIntake } from "@/lib/organizations/create";
 import { createPostgresStore, migratePostgres } from "./postgres";
 
+const DATABASE_URL = process.env.DATABASE_URL ?? "postgres://milan@localhost/rivera";
+
 describe("phase 1 postgres persistence", () => {
-  it.skipIf(!process.env.DATABASE_URL || process.env.RIVERA_STORE === "memory")(
-    "creates an organization that can be read back",
-    async () => {
-      const sql = postgres(process.env.DATABASE_URL!, { max: 1 });
-      await migratePostgres(sql);
-      const store = createPostgresStore(sql);
-      const org = await createOrganizationFromIntake(store, {
-        goal: "Build a developer tool for Stellar developers",
-        deadline: "2026-10-19",
-        budgetUsd: 500,
-      });
-      const read = await store.getOrganization(org.id);
-      expect(read?.budgetCents).toBe(50000);
-      await sql.end();
-    },
-  );
+  const sql = postgres(DATABASE_URL, { max: 1 });
+  const store = createPostgresStore(sql);
+  const createdIds: string[] = [];
+
+  beforeAll(async () => {
+    await migratePostgres(sql);
+  });
+
+  afterAll(async () => {
+    for (const id of createdIds) {
+      await sql`DELETE FROM events WHERE organization_id = ${id}`;
+      await sql`DELETE FROM organizations WHERE id = ${id}`;
+    }
+    await sql.end({ timeout: 2 });
+  });
+
+  it("persists an organization and its created event", async () => {
+    const org = await createOrganizationFromIntake(store, {
+      goal: "Build a developer tool for Stellar developers",
+      deadline: "2026-10-19",
+      budgetUsd: 500,
+      targetUser: "Soroban developers",
+    });
+    createdIds.push(org.id);
+
+    const read = await store.getOrganization(org.id);
+    expect(read?.id).toBe(org.id);
+    expect(read?.budgetCents).toBe(50000);
+    expect(read?.goal).toContain("Stellar");
+
+    const events = await store.listEvents(org.id);
+    expect(events.some((event) => event.type === "organization.created")).toBe(true);
+  });
+
+  it("survives a new database connection (refresh)", async () => {
+    const org = await createOrganizationFromIntake(store, {
+      goal: "Build a debugger that survives a page refresh",
+      deadline: "2026-10-19",
+      budgetUsd: 250,
+    });
+    createdIds.push(org.id);
+
+    const freshSql = postgres(DATABASE_URL, { max: 1 });
+    const freshStore = createPostgresStore(freshSql);
+    const read = await freshStore.getOrganization(org.id);
+    expect(read?.budgetCents).toBe(25000);
+    expect(read?.goal).toContain("refresh");
+    await freshSql.end({ timeout: 2 });
+  });
 });

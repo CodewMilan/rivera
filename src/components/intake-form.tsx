@@ -54,9 +54,7 @@ export function IntakeForm() {
       return;
     }
 
-    const orgId = created.organization.id as string;
-    await fetch(`/api/organizations/${orgId}/runs`, { method: "POST" });
-    router.push(`/organizations/${orgId}`);
+    router.push(`/organizations/${created.organization.id}`);
   }
 
   return (
@@ -174,7 +172,7 @@ export function IntakeForm() {
         disabled={pending}
         className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60"
       >
-        {pending ? "Standing up the organization…" : "Start Rivera"}
+        {pending ? "Saving organization…" : "Create organization"}
       </button>
     </form>
   );

@@ -35,6 +35,8 @@ describe("phase 1 organization API", () => {
     expect(read.status).toBe(200);
     const again = await read.json();
     expect(again.organization.id).toBe(payload.organization.id);
+    expect(again.phase).toBe("intake");
+    expect(again.events.some((event: { type: string }) => event.type === "organization.created")).toBe(true);
 
     const list = await GET();
     const listed = await list.json();
