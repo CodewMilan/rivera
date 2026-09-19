@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { figma } from "@/lib/figma-assets";
 import { FigmaAsset } from "@/components/site/figma-asset";
@@ -6,15 +9,21 @@ import { AuthActions, AuthNavLink } from "@/components/site/auth-controls";
 import { OutlineButton, SolidButton } from "@/components/site/buttons";
 import { DemoThumb, RiveraMark } from "@/components/site/rivera-mark";
 
+function isAuthPath(pathname: string) {
+  return pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up");
+}
+
 export function SiteChrome({ children }: { children: ReactNode }) {
+  const auth = isAuthPath(usePathname());
+
   return (
     <div className="relative min-h-screen bg-[#0c0a10] text-[#f4f2f0]">
-      <AlertBanner />
+      {auth ? null : <AlertBanner />}
       <div className="relative overflow-hidden">
         <StarField />
         <SiteHeader />
         {children}
-        <SiteFooter />
+        {auth ? <AuthFooter /> : <SiteFooter />}
       </div>
     </div>
   );
@@ -86,6 +95,14 @@ function StarField() {
         <FigmaAsset src={figma.starAxis4} alt="" width={574.627} height={573.808} />
       </div>
     </div>
+  );
+}
+
+function AuthFooter() {
+  return (
+    <footer className="relative z-10 px-[30px] py-8">
+      <p className="text-center text-[13px] leading-[24px] text-[#928c97]">© 2026 Rivera</p>
+    </footer>
   );
 }
 

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
 import { SiteChrome } from "@/components/site/site-chrome";
+import { clerkAppearance, clerkLocalization } from "@/lib/clerk-appearance";
 import "./globals.css";
 
 const inter = Inter({
@@ -21,7 +22,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${inter.className} h-full antialiased`}>
       <body className="min-h-full bg-[#0c0a10] text-[#f4f2f0]">
-        <ClerkProvider>
+        <ClerkProvider appearance={clerkAppearance} localization={clerkLocalization}>
           <SiteChrome>{children}</SiteChrome>
         </ClerkProvider>
       </body>

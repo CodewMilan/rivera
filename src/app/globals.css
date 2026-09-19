@@ -78,3 +78,20 @@ textarea,
 select {
   color: #f4f2f0;
 }
+
+.cl-rootBox {
+  width: 100%;
+}
+
+.cl-cardBox,
+.cl-card {
+  box-shadow: none !important;
+}
+
+.cl-footer {
+  background: transparent !important;
+}
+
+.cl-badge {
+  display: none;
+}

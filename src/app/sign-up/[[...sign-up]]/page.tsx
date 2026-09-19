@@ -1,9 +1,17 @@
 import { SignUp } from "@clerk/nextjs";
+import { AuthBoard } from "@/components/site/auth-board";
+import { clerkAppearance } from "@/lib/clerk-appearance";
 
 export default function SignUpPage() {
   return (
-    <div className="relative z-10 flex justify-center px-[30px] py-16">
-      <SignUp />
-    </div>
+    <AuthBoard>
+      <SignUp
+        appearance={clerkAppearance}
+        routing="path"
+        path="/sign-up"
+        signInUrl="/sign-in"
+        fallbackRedirectUrl="/"
+      />
+    </AuthBoard>
   );
 }
