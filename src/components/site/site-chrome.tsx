@@ -3,10 +3,11 @@ import type { ReactNode } from "react";
 import { figma } from "@/lib/figma-assets";
 import { FigmaAsset } from "@/components/site/figma-asset";
 import { NavOutlineLink, NavSolidLink, OutlineButton, SolidButton } from "@/components/site/buttons";
+import { DemoThumb, RiveraMark } from "@/components/site/rivera-mark";
 
 export function SiteChrome({ children }: { children: ReactNode }) {
   return (
-    <div className="relative min-h-screen bg-[#0c0a10] text-[#f4f2f0]" data-name="withcoherence.com">
+    <div className="relative min-h-screen bg-[#0c0a10] text-[#f4f2f0]">
       <AlertBanner />
       <div className="relative overflow-hidden">
         <StarField />
@@ -47,8 +48,8 @@ function AlertBanner() {
 function SiteHeader() {
   return (
     <header className="relative z-20 mx-auto flex h-[64px] w-full max-w-[1370px] items-center justify-between px-[30px]" data-name="Banner">
-      <Link href="/" className="flex w-[160px] items-center" aria-label="Rivera home">
-        <FigmaAsset src={figma.logo} alt="Rivera" width={159.957} height={39.47} />
+      <Link href="/" className="flex items-center" aria-label="Rivera home">
+        <RiveraMark />
       </Link>
       <nav className="hidden items-center md:flex" aria-label="Primary">
         <Link href="/#features" className="flex items-center gap-[4.99px] px-[15px] py-[20px] text-[14px] leading-[24px] text-[#f4f2f0]">
@@ -103,7 +104,7 @@ function SiteFooter() {
         <div className="mt-[21px] flex flex-wrap items-center gap-[10px]">
           <SolidButton href="/#intake">Try a sandbox</SolidButton>
           <OutlineButton href="/#features">
-            <FigmaAsset src={figma.lilthumb} alt="" width={65.11} height={37.2} />
+            <DemoThumb />
             Watch the demo
           </OutlineButton>
         </div>

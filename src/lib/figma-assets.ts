@@ -22,6 +22,7 @@ export const figma = {
   starAxis3: "/figma/imgMaskGroup1.svg",
   starAxis4: "/figma/imgMaskGroup2.svg",
   logo: "/figma/img6462990F476598B6Fd0C9D63PrimitiveSvg.svg",
+  mark: "/figma/rivera-mark.svg",
   littleStar: "/figma/img6462990F476598B6Fd0C9D5CLittleStarSvg.svg",
   chevron: "/figma/imgIcon.svg",
   aws: "/figma/img6462990F476598B6Fd0C9Df4AwsSvg.svg",

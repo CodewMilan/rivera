@@ -1,6 +1,17 @@
+import type { ReactNode } from "react";
 import { IntakeForm } from "@/components/intake-form";
 import { FigmaAsset } from "@/components/site/figma-asset";
 import { OutlineButton, SolidButton } from "@/components/site/buttons";
+import { DemoThumb } from "@/components/site/rivera-mark";
+import {
+  FeaturePreviewComment,
+  FeaturePreviewEditor,
+  FeaturePreviewPipeline,
+  FeaturePreviewPlan,
+  FeaturePreviewPromote,
+  HeroDashboard,
+  LaunchTimeline,
+} from "@/components/site/product-mocks";
 import { figma } from "@/lib/figma-assets";
 
 export function Landing() {
@@ -42,17 +53,12 @@ function Hero() {
         <div className="flex flex-wrap items-center gap-[10px]">
           <SolidButton href="#intake">Try a sandbox</SolidButton>
           <OutlineButton href="#features">
-            <FigmaAsset src={figma.lilthumb} alt="" width={65.11} height={37.2} />
+            <DemoThumb />
             Watch the demo
           </OutlineButton>
         </div>
       </div>
-      <div
-        className="h-auto max-w-[1370px] overflow-hidden rounded-[20px] shadow-[0px_0px_16px_4px_rgba(194,184,255,0.08)]"
-        data-name="dashboard"
-      >
-        <FigmaAsset src={figma.dashboard} alt="Rivera organization dashboard" className="block w-full" />
-      </div>
+      <HeroDashboard />
       <div id="intake" className="scroll-mt-24 rounded-[10px] bg-[rgba(39,38,45,0.8)] p-10">
         <h2 className="text-[29px] font-normal leading-[36px] text-[#f4f2f0]">Create an organization</h2>
         <p className="mt-2 text-[18px] leading-[24px] text-[#c2b8ff]">Phase 1 saves the goal. Agents start later.</p>
@@ -67,9 +73,7 @@ function Hero() {
 function Testimonials() {
   return (
     <section className="relative mt-[80px] overflow-hidden px-[35px] pt-[112px] pb-[16px]" data-name="Section">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <FigmaAsset src={figma.testimonialBg} alt="" className="absolute left-0 top-0 h-[106.36%] w-full" />
-      </div>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(194,184,255,0.16),transparent_70%)]" />
       <div className="relative mx-auto flex w-full max-w-[1370px] flex-col gap-[80px] px-[30px]">
         <div className="flex flex-col justify-between gap-16 lg:flex-row">
           <Quote
@@ -93,13 +97,13 @@ function Testimonials() {
         </div>
         <div className="flex flex-col gap-[16px]">
           <p className="text-[12px] leading-[24px] text-[rgba(244,242,240,0.6)]">Many more growing teams trust Rivera</p>
-          <div className="flex flex-wrap items-center gap-[32px] pb-[8px]">
-            <FigmaAsset src={figma.logoPattern} alt="Pattern" width={110} height={23.64} />
-            <FigmaAsset src={figma.logoCaredge} alt="CarEdge" width={110} height={27.72} />
-            <FigmaAsset src={figma.logoLuxe} alt="Luxe" width={88.19} height={31.98} />
-            <FigmaAsset src={figma.logoUltralight} alt="Ultralight" width={110} height={31.55} />
-            <FigmaAsset src={figma.logoCubby} alt="Cubby" width={110} height={21.23} />
-            <FigmaAsset src={figma.logoSuno} alt="Suno" width={95.41} height={31.98} />
+          <div className="flex flex-wrap items-center gap-[32px] pb-[8px] text-[18px] tracking-[-0.3px] text-[#f4f2f0]/70">
+            <span>Pattern</span>
+            <span>CarEdge</span>
+            <span>Luxe</span>
+            <span>Ultralight</span>
+            <span>Cubby</span>
+            <span>Suno</span>
           </div>
         </div>
       </div>
@@ -177,27 +181,27 @@ function FeatureCards() {
         <FeatureCard
           title="Research and specialist agents"
           body="created with every goal. Collaborate with research, strategy, engineering, and marketing in one run."
-          image={figma.featurePrs}
-          imageAlt="Pull request and task board"
-        />
+        >
+          <FeaturePreviewComment />
+        </FeatureCard>
         <FeatureCard
           title="Live CEO planning"
           body="does the heavy lifting for you. One goal continuously becomes tasks, with live LLM output you can inspect."
-          image={figma.featureInfra}
-          imageAlt="Infrastructure graph"
-        />
+        >
+          <FeaturePreviewPlan />
+        </FeatureCard>
         <FeatureCard
           title="Debate and approvals"
           body="offers configurable human gates for risky actions, budget spend, and anything that should not auto-run."
-          image={figma.featureCicd}
-          imageAlt="CI/CD pipeline"
-        />
+        >
+          <FeaturePreviewPipeline />
+        </FeatureCard>
         <FeatureCard
           title="Social campaign review"
           body="is a click away. Rest assured, publish stays off until you approve, and you control who can ship."
-          image={figma.featurePromote}
-          imageAlt="Promote workflow"
-        />
+        >
+          <FeaturePreviewPromote />
+        </FeatureCard>
         <article className="relative overflow-hidden rounded-[10px] bg-[rgba(39,38,45,0.8)] lg:col-span-2">
           <div className="grid items-start gap-8 p-10 lg:grid-cols-2">
             <div className="flex max-w-[615px] flex-col gap-[30px]">
@@ -211,7 +215,7 @@ function FeatureCards() {
                 Learn more ↗
               </a>
             </div>
-            <FigmaAsset src={figma.featureIde} alt="Cloud IDE" className="block w-full" />
+            <FeaturePreviewEditor />
           </div>
         </article>
       </div>
@@ -222,25 +226,21 @@ function FeatureCards() {
 function FeatureCard({
   title,
   body,
-  image,
-  imageAlt,
+  children,
 }: {
   title: string;
   body: string;
-  image: string;
-  imageAlt: string;
+  children: ReactNode;
 }) {
   return (
-    <article className="flex min-h-[616px] flex-col rounded-[10px] bg-[rgba(39,38,45,0.8)] p-10">
+    <article className="flex min-h-[520px] flex-col rounded-[10px] bg-[rgba(39,38,45,0.8)] p-10">
       <h3 className="text-[29px] font-normal leading-[36px] text-[#f4f2f0]">
         {title} <span className="text-[rgba(146,140,151,0.9)]">{body}</span>
       </h3>
       <a href="#intake" className="mt-6 text-[18px] font-light leading-[24px] text-[#c2b8ff]">
         Learn more ↗
       </a>
-      <div className="mt-auto pt-8">
-        <FigmaAsset src={image} alt={imageAlt} className="block w-full" />
-      </div>
+      <div className="mt-auto pt-8">{children}</div>
     </article>
   );
 }
@@ -252,7 +252,7 @@ function Gantt() {
         Don&apos;t build all this stuff yourself.
         <span className="text-[#f4f2f0]"> Rivera gets launch work off your roadmap.</span>
       </h2>
-      <FigmaAsset src={figma.gantt} alt="Rivera launch timeline" className="block w-full" />
+      <LaunchTimeline />
     </section>
   );
 }
