@@ -41,6 +41,11 @@ export function OrgDashboard({
     return () => window.clearInterval(timer);
   }, [organizationId]);
 
+  useEffect(() => {
+    const hash = window.location.hash.replace("#", "") as Tab;
+    if (hash === "agents" || hash === "tasks" || hash === "timeline") setTab(hash);
+  }, [organizationId]);
+
   async function act(path: string, id?: string) {
     setBusy(id ?? path);
     await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
@@ -80,14 +85,15 @@ export function OrgDashboard({
   const blocked = tasks.filter((task) => task.status === "blocked" || task.status === "approval_required");
   const pending = approvals.filter((item) => item.status === "pending");
 
+  const orgHref = `/organizations/${organizationId}`;
   const tabs: Array<{ id: Tab; label: string; href: string }> = [
-    { id: "overview", label: "Overview", href: `/organizations/${organizationId}` },
-    { id: "agents", label: "Agents", href: `/organizations/${organizationId}` },
-    { id: "tasks", label: "Tasks", href: `/organizations/${organizationId}` },
-    { id: "timeline", label: "Timeline", href: `/organizations/${organizationId}` },
-    { id: "decisions", label: "Decisions", href: `/organizations/${organizationId}/decisions` },
-    { id: "content", label: "Content", href: `/organizations/${organizationId}/content` },
-    { id: "report", label: "Report", href: `/organizations/${organizationId}/report` },
+    { id: "overview", label: "Overview", href: orgHref },
+    { id: "agents", label: "Agents", href: `${orgHref}#agents` },
+    { id: "tasks", label: "Tasks", href: `${orgHref}#tasks` },
+    { id: "timeline", label: "Timeline", href: `${orgHref}#timeline` },
+    { id: "decisions", label: "Decisions", href: `${orgHref}/decisions` },
+    { id: "content", label: "Content", href: `${orgHref}/content` },
+    { id: "report", label: "Report", href: `${orgHref}/report` },
   ];
 
   return (
@@ -126,7 +132,13 @@ export function OrgDashboard({
           <Link
             key={item.id}
             href={item.href}
-            onClick={() => setTab(item.id)}
+            onClick={(event) => {
+              if (item.href === orgHref || item.href.startsWith(`${orgHref}#`)) {
+                event.preventDefault();
+                window.history.replaceState(null, "", item.href);
+              }
+              setTab(item.id);
+            }}
             className={`inline-flex min-h-11 items-center rounded-[5px] px-4 text-sm focus-visible:ring-2 focus-visible:ring-[#c2b8ff] ${
               tab === item.id ? "bg-white text-[#221d2a]" : "border border-[#c2b8ff] text-[#c2b8ff]"
             }`}

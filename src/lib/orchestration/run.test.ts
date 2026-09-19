@@ -25,7 +25,6 @@ describe("phase 2 orchestrator", () => {
   it("creates a run without executing the full loop", async () => {
     const store = createMemoryStore();
     const org = await createOrganizationFromIntake(store, intake());
-    const { createRun } = await import("./run");
     const run = await createRun(
       {
         store,
@@ -38,6 +37,8 @@ describe("phase 2 orchestrator", () => {
     expect(run.status).toBe("intake");
     expect(await store.listAgents(org.id)).toHaveLength(0);
   });
+
+  it("creates agents, tasks, and events from a CEO plan", async () => {
     const store = createMemoryStore();
     const org = await createOrganizationFromIntake(store, intake());
     const run = await createAndStartRun(
