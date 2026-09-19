@@ -3,6 +3,8 @@ import { connectPostgres } from "./postgres";
 import type { Store } from "./types";
 
 export type { Store } from "./types";
+export { createMemoryStore } from "./memory";
+export { createPostgresStore, migratePostgres } from "./postgres";
 
 let storePromise: Promise<Store> | null = null;
 let memoryStore = createMemoryStore();

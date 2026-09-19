@@ -1,0 +1,35 @@
+import { nowIso } from "@/lib/clock";
+import { appendEvent } from "@/lib/events/log";
+import { createId } from "@/lib/ids";
+import type { Store } from "@/lib/store";
+import { dollarsToCents, type IntakeInput } from "@/lib/validation/intake";
+import type { Organization } from "@/types";
+
+export async function createOrganizationFromIntake(
+  store: Store,
+  input: IntakeInput,
+): Promise<Organization> {
+  const organization = await store.createOrganization({
+    id: createId(),
+    name: input.name?.trim() || "Untitled Rivera org",
+    goal: input.goal,
+    domain: input.domain?.trim() || "developer-tools",
+    targetUser: input.targetUser?.trim() || "",
+    technology: input.technology?.trim() || "",
+    preferredChannels: input.preferredChannels ?? ["x", "linkedin", "instagram", "tiktok"],
+    autoPublish: input.autoPublish ?? false,
+    budgetCents: dollarsToCents(input.budgetUsd),
+    budgetUsedCents: 0,
+    deadline: new Date(input.deadline).toISOString(),
+    status: "active",
+    createdAt: nowIso(),
+  });
+
+  await appendEvent(store, {
+    organizationId: organization.id,
+    type: "organization.created",
+    summary: `Created organization for: ${organization.goal}`,
+  });
+
+  return organization;
+}

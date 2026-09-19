@@ -1,26 +1,98 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f3eee4;
+  --foreground: #1b2421;
+  --card: #fffaf1;
+  --card-foreground: #1b2421;
+  --popover: #fffaf1;
+  --popover-foreground: #1b2421;
+  --primary: #1f6b63;
+  --primary-foreground: #f3eee4;
+  --secondary: #e7dfd1;
+  --secondary-foreground: #1b2421;
+  --muted: #e7dfd1;
+  --muted-foreground: #5b6662;
+  --accent: #c97848;
+  --accent-foreground: #fffaf1;
+  --destructive: #9b3a2f;
+  --border: #d7cfbf;
+  --input: #d7cfbf;
+  --ring: #1f6b63;
+  --sidebar: #17201d;
+  --sidebar-foreground: #ece6db;
+}
+
+[data-theme="dark"] {
+  --background: #101614;
+  --foreground: #ece6db;
+  --card: #18211e;
+  --card-foreground: #ece6db;
+  --popover: #18211e;
+  --popover-foreground: #ece6db;
+  --primary: #7dcdc0;
+  --primary-foreground: #10201c;
+  --secondary: #24302c;
+  --secondary-foreground: #ece6db;
+  --muted: #24302c;
+  --muted-foreground: #9aa39e;
+  --accent: #e0a077;
+  --accent-foreground: #1b140e;
+  --destructive: #e08a7d;
+  --border: #2c3834;
+  --input: #2c3834;
+  --ring: #7dcdc0;
+  --sidebar: #0c1110;
+  --sidebar-foreground: #ece6db;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
+html,
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans), sans-serif;
+  min-height: 100vh;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--primary) 35%, transparent);
 }
