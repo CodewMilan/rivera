@@ -2,7 +2,7 @@
 
 An AI product-launch organization for technical founders.
 
-**Current phase: 1 — Foundation.** A founder can submit a goal and see a saved organization. Agents, runs, and providers are not in this phase.
+**Current phase: 2 — Live organization.** A founder submits a goal, Rivera staffs specialist agents, and a run moves through research, debate, content, and review.
 
 ## Quick start
 
@@ -15,10 +15,12 @@ pnpm test
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), submit the demo goal, then refresh the organization page. The record must still be there.
+Open [http://localhost:3000](http://localhost:3000), submit the demo goal, and watch the organization dashboard. Agents, tasks, and a timeline appear as the run progresses.
+
+Leave `LLM_API_KEY` empty to run in demo mode with labeled fixtures. Set it to use a live OpenAI-compatible model.
 
 ## Persistence
 
-Phase 1 uses Postgres. `DATABASE_URL` and `RIVERA_STORE=postgres` are required for the app.
+Postgres is required for the app (`DATABASE_URL` and `RIVERA_STORE=postgres`).
 
-Unit tests use an in-memory store. Phase 1 persistence tests talk to the real `rivera` database.
+Unit tests use an in-memory store. Persistence tests talk to the real `rivera` database.

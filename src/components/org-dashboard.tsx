@@ -8,6 +8,8 @@ import type { OrganizationSnapshot } from "@/types";
 
 type Tab = "overview" | "agents" | "tasks" | "timeline" | "decisions" | "content" | "report";
 
+const launchingOrgs = new Set<string>();
+
 export function OrgDashboard({
   organizationId,
   initialTab = "overview",
@@ -45,6 +47,12 @@ export function OrgDashboard({
     await load();
     setBusy(null);
   }
+
+  useEffect(() => {
+    if (!snapshot || snapshot.run || launchingOrgs.has(organizationId)) return;
+    launchingOrgs.add(organizationId);
+    void act(`/api/organizations/${organizationId}/runs`, "start-run");
+  }, [snapshot, organizationId]);
 
   if (error && !snapshot) {
     return (
@@ -92,7 +100,17 @@ export function OrgDashboard({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge value={phaseLabel(run?.status)} tone="live" />
-          {run?.demoMode ? <StatusBadge value="Demo mode" tone="warn" /> : <StatusBadge value="Live providers" tone="good" />}
+          {run?.demoMode ? <StatusBadge value="Demo mode" tone="warn" /> : run ? <StatusBadge value="Live providers" tone="good" /> : null}
+          {!run ? (
+            <button
+              type="button"
+              disabled={busy === "start-run"}
+              onClick={() => void act(`/api/organizations/${organizationId}/runs`, "start-run")}
+              className="inline-flex min-h-11 items-center rounded-[5px] border border-white bg-white px-4 text-sm text-[#221d2a] focus-visible:ring-2 focus-visible:ring-[#c2b8ff] disabled:opacity-60"
+            >
+              {busy === "start-run" ? "Starting…" : "Launch agents"}
+            </button>
+          ) : null}
         </div>
       </header>
 
@@ -122,7 +140,7 @@ export function OrgDashboard({
         <div className="grid gap-6 lg:grid-cols-2">
           <Panel title="Active agents">
             {agents.length === 0 ? (
-              <Empty label="No agents yet. The CEO is still planning." />
+              <Empty label={run ? "CEO is staffing the organization." : "Launch agents to start the Rivera run."} />
             ) : (
               <ul className="space-y-3">
                 {agents.slice(0, 4).map((agent) => (

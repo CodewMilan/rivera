@@ -61,7 +61,7 @@ function Hero() {
       <HeroDashboard />
       <div id="intake" className="scroll-mt-24 rounded-[10px] bg-[rgba(39,38,45,0.8)] p-10">
         <h2 className="text-[29px] font-normal leading-[36px] text-[#f4f2f0]">Create an organization</h2>
-        <p className="mt-2 text-[18px] leading-[24px] text-[#c2b8ff]">Phase 1 saves the goal. Agents start later.</p>
+        <p className="mt-2 text-[18px] leading-[24px] text-[#c2b8ff]">Phase 2 staffs agents and starts the launch run.</p>
         <div className="mt-8">
           <IntakeForm />
         </div>

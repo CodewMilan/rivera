@@ -637,7 +637,7 @@ export async function runOrganization(runId: string, deps: OrchestratorDeps): Pr
   return run;
 }
 
-export async function createAndStartRun(deps: OrchestratorDeps, organizationId: string): Promise<Run> {
+export async function createRun(deps: OrchestratorDeps, organizationId: string): Promise<Run> {
   const org = await deps.store.getOrganization(organizationId);
   if (!org) throw new Error("Organization not found");
   const run = await deps.store.createRun({
@@ -658,5 +658,10 @@ export async function createAndStartRun(deps: OrchestratorDeps, organizationId: 
     type: "run.created",
     summary: "Rivera run created",
   });
+  return run;
+}
+
+export async function createAndStartRun(deps: OrchestratorDeps, organizationId: string): Promise<Run> {
+  const run = await createRun(deps, organizationId);
   return runOrganization(run.id, deps);
 }

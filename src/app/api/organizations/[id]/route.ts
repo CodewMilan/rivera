@@ -7,9 +7,10 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   const organization = await store.getOrganization(id);
   if (!organization) return errorJson("Organization not found", 404);
   const events = await store.listEvents(id);
+  const run = await store.getLatestRun(id);
   return json({
     organization,
     events,
-    phase: "intake",
+    phase: run?.status ?? "intake",
   });
 }

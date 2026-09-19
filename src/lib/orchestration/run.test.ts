@@ -4,7 +4,7 @@ import { FakeLLMProvider } from "@/lib/providers/llm";
 import { FakeHiggsfieldProvider } from "@/lib/providers/higgsfield";
 import { FakeSearchProvider } from "@/lib/tools/search";
 import { createMemoryStore, resetStore } from "@/lib/store";
-import { createAndStartRun, defaultRunCaps, runOrganization } from "./run";
+import { createAndStartRun, createRun, defaultRunCaps, runOrganization } from "./run";
 import { nowIso } from "@/lib/clock";
 import { createId } from "@/lib/ids";
 
@@ -22,7 +22,22 @@ describe("phase 2 orchestrator", () => {
     resetStore();
   });
 
-  it("creates agents, tasks, and events from a CEO plan", async () => {
+  it("creates a run without executing the full loop", async () => {
+    const store = createMemoryStore();
+    const org = await createOrganizationFromIntake(store, intake());
+    const { createRun } = await import("./run");
+    const run = await createRun(
+      {
+        store,
+        llm: new FakeLLMProvider(() => "{not-json"),
+        search: new FakeSearchProvider(),
+        media: new FakeHiggsfieldProvider(),
+      },
+      org.id,
+    );
+    expect(run.status).toBe("intake");
+    expect(await store.listAgents(org.id)).toHaveLength(0);
+  });
     const store = createMemoryStore();
     const org = await createOrganizationFromIntake(store, intake());
     const run = await createAndStartRun(
