@@ -2,13 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ChannelLogo, type ChannelId } from "@/components/site/channel-logos";
+import { cn } from "@/lib/cn";
 
-const CHANNELS = [
+const CHANNELS: Array<{ id: ChannelId; label: string }> = [
   { id: "x", label: "X" },
   { id: "linkedin", label: "LinkedIn" },
   { id: "instagram", label: "Instagram Reels" },
   { id: "tiktok", label: "TikTok" },
-] as const;
+];
 
 const DEMO_GOAL =
   "Build a developer tool that helps Stellar developers debug Soroban transactions in 30 days with a $500 budget.";
@@ -18,20 +20,26 @@ export function IntakeForm() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [channels, setChannels] = useState<Record<ChannelId, boolean>>({
+    x: true,
+    linkedin: true,
+    instagram: true,
+    tiktok: true,
+  });
 
   async function onSubmit(formData: FormData) {
     setPending(true);
     setError(null);
     setFieldErrors({});
 
-    const channels = CHANNELS.map((channel) => channel.id).filter((id) => formData.get(`channel-${id}`) === "on");
+    const preferredChannels = CHANNELS.map((channel) => channel.id).filter((id) => formData.get(`channel-${id}`) === "on");
     const payload = {
       goal: String(formData.get("goal") ?? ""),
       targetUser: String(formData.get("targetUser") ?? ""),
       deadline: String(formData.get("deadline") ?? ""),
       budgetUsd: Number(formData.get("budgetUsd")),
       technology: String(formData.get("technology") ?? ""),
-      preferredChannels: channels,
+      preferredChannels,
       autoPublish: formData.get("autoPublish") === "on",
     };
 
@@ -148,17 +156,39 @@ export function IntakeForm() {
       <fieldset className="space-y-3">
         <legend className="text-sm font-medium">Preferred channels</legend>
         <div className="grid gap-2 sm:grid-cols-2">
-          {CHANNELS.map((channel) => (
-            <label key={channel.id} className="flex min-h-11 items-center gap-3 rounded-[5px] border border-[#c2b8ff]/30 px-3 text-sm">
-              <input
-                type="checkbox"
-                name={`channel-${channel.id}`}
-                defaultChecked
-                className="size-4 accent-primary"
-              />
-              {channel.label}
-            </label>
-          ))}
+          {CHANNELS.map((channel) => {
+            const selected = channels[channel.id];
+            return (
+              <label
+                key={channel.id}
+                className={cn(
+                  "flex min-h-14 cursor-pointer items-center gap-3 rounded-[5px] border px-3 text-sm transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[#c2b8ff]",
+                  selected
+                    ? "border-[#c2b8ff] bg-[rgba(194,184,255,0.08)] text-[#f4f2f0]"
+                    : "border-white/15 text-[#928c97]",
+                )}
+              >
+                <input
+                  type="checkbox"
+                  name={`channel-${channel.id}`}
+                  checked={selected}
+                  onChange={(event) =>
+                    setChannels((current) => ({ ...current, [channel.id]: event.target.checked }))
+                  }
+                  className="sr-only"
+                />
+                <span
+                  className={cn(
+                    "grid place-items-center transition-[filter,opacity]",
+                    selected ? "opacity-100 grayscale-0" : "opacity-55 grayscale",
+                  )}
+                >
+                  <ChannelLogo id={channel.id} />
+                </span>
+                {channel.label}
+              </label>
+            );
+          })}
         </div>
       </fieldset>
 

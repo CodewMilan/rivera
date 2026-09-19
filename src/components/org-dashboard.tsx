@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { StatusBadge, toneForStatus } from "@/components/status-badge";
 import { money, phaseLabel, shortDate } from "@/lib/format";
-import type { OrganizationSnapshot } from "@/types";
+import { evidenceFromEvents, toolMetricsFromEvents } from "@/lib/research/evidence";
+import type { Asset, OrganizationSnapshot } from "@/types";
 
 type Tab = "overview" | "agents" | "tasks" | "timeline" | "decisions" | "content" | "report";
 
@@ -80,10 +81,14 @@ export function OrgDashboard({
     );
   }
 
-  const { organization, run, agents, tasks, events, decisions, approvals, contentItems, report } = snapshot;
+  const { organization, run, agents, tasks, events, decisions, approvals, contentItems, mediaJobs, assets, report } =
+    snapshot;
   const remaining = organization.budgetCents - organization.budgetUsedCents;
   const blocked = tasks.filter((task) => task.status === "blocked" || task.status === "approval_required");
   const pending = approvals.filter((item) => item.status === "pending");
+  const evidence = evidenceFromEvents(events);
+  const toolMetrics = toolMetricsFromEvents(events);
+  const assetsById = new Map(assets.map((asset) => [asset.id, asset]));
 
   const orgHref = `/organizations/${organizationId}`;
   const tabs: Array<{ id: Tab; label: string; href: string }> = [
@@ -149,6 +154,7 @@ export function OrgDashboard({
       </nav>
 
       {tab === "overview" ? (
+        <div className="space-y-6">
         <div className="grid gap-6 lg:grid-cols-2">
           <Panel title="Active agents">
             {agents.length === 0 ? (
@@ -189,6 +195,43 @@ export function OrgDashboard({
             )}
           </Panel>
         </div>
+        <Panel title="Research evidence">
+          {evidence.length === 0 && toolMetrics.length === 0 ? (
+            <Empty label="Search, GitHub, and calculator results appear during research." />
+          ) : (
+            <div className="space-y-4">
+              {toolMetrics.length > 0 ? (
+                <ul className="flex flex-wrap gap-2">
+                  {toolMetrics.map((metric, index) => (
+                    <li
+                      key={`${metric.source}-${index}`}
+                      className="rounded-full border border-[#c2b8ff]/30 px-3 py-1 font-mono text-xs text-[#c2b8ff]"
+                    >
+                      {metric.summary}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <ul className="space-y-3">
+                {evidence.map((item) => (
+                  <li key={`${item.source}-${item.url}`} className="text-sm">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.source}</p>
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 inline-flex min-h-11 items-center text-[#c2b8ff] underline-offset-4 hover:underline"
+                    >
+                      {item.title}
+                    </a>
+                    {item.snippet ? <p className="mt-1 text-muted-foreground">{item.snippet}</p> : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Panel>
+        </div>
       ) : null}
 
       {tab === "agents" ? (
@@ -201,7 +244,12 @@ export function OrgDashboard({
                 <StatusBadge value={agent.status} tone={toneForStatus(agent.status)} />
               </div>
               <p className="mt-3 text-sm text-muted-foreground">{agent.objective}</p>
-              <p className="mt-4 text-xs text-muted-foreground">{agent.lastAction ?? "Waiting for a task"}</p>
+              {agent.tools.length > 0 ? (
+                <p className="mt-2 font-mono text-[11px] uppercase tracking-wide text-[#c2b8ff]/80">
+                  {agent.tools.join(" · ")}
+                </p>
+              ) : null}
+              <p className="mt-4 text-sm">{agent.lastAction ?? "Waiting for a task"}</p>
               <p className="mt-2 font-mono text-xs tabular-nums">
                 {money(agent.spentCents)} spent
                 {agent.confidence != null ? ` · ${Math.round(agent.confidence * 100)}% confidence` : ""}
@@ -296,7 +344,13 @@ export function OrgDashboard({
       {tab === "content" ? (
         <div className="grid gap-4">
           {contentItems.length === 0 ? <Empty label="Launch content appears after the social plan." /> : null}
-          {contentItems.map((item) => (
+          {mediaJobs.some((job) => job.status === "queued" || job.status === "processing") ? (
+            <p className="text-sm text-[#c2b8ff]">Higgsfield is still rendering a preview.</p>
+          ) : null}
+          {contentItems.map((item) => {
+            const media = item.mediaAssetIds.map((id) => assetsById.get(id)).filter((asset): asset is Asset => Boolean(asset));
+            const job = mediaJobs.find((entry) => entry.contentItemId === item.id);
+            return (
             <article key={item.id} className="rounded-[10px] bg-[rgba(39,38,45,0.8)] p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -305,8 +359,22 @@ export function OrgDashboard({
                 </div>
                 <StatusBadge value={item.status} tone={toneForStatus(item.status)} />
               </div>
+              {media[0] ? (
+                <MediaPreview asset={media[0]} kind={item.type} />
+              ) : job ? (
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Media {job.status}
+                  {job.error ? `: ${job.error}` : ""}
+                </p>
+              ) : null}
               <p className="mt-3 text-sm">{item.hook}</p>
               <p className="mt-2 text-sm text-muted-foreground">{item.caption}</p>
+              {item.hashtags.length > 0 ? (
+                <p className="mt-2 text-xs text-[#c2b8ff]">{item.hashtags.join(" ")}</p>
+              ) : null}
+              {item.claimsUsed.length > 0 ? (
+                <p className="mt-2 text-xs text-muted-foreground">Claims: {item.claimsUsed.join(" · ")}</p>
+              ) : null}
               {item.demoPublished ? (
                 <p className="mt-3 text-xs text-accent">Demo mode: publishing simulated</p>
               ) : null}
@@ -341,7 +409,8 @@ export function OrgDashboard({
                 </button>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       ) : null}
 
@@ -398,4 +467,23 @@ function Panel({ title, children }: { title: string; children: import("react").R
 
 function Empty({ label }: { label: string }) {
   return <p className="text-sm text-muted-foreground">{label}</p>;
+}
+
+function MediaPreview({ asset, kind }: { asset: Asset; kind: string }) {
+  const src = asset.previewUrl ?? asset.url;
+  const videoFile = /\.(mp4|webm|mov)(\?|$)/i.test(asset.url);
+  return (
+    <figure className="mt-4 overflow-hidden rounded-[8px] border border-white/10">
+      {kind === "video" && videoFile ? (
+        <video src={asset.url} poster={asset.previewUrl} controls className="max-h-64 w-full bg-black object-cover" />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="" className="max-h-64 w-full object-cover" />
+      )}
+      <figcaption className="px-3 py-2 text-xs text-muted-foreground">
+        {kind === "video" ? "Higgsfield video preview" : "Higgsfield still"}
+        {asset.provider ? ` · ${asset.provider}` : ""}
+      </figcaption>
+    </figure>
+  );
 }

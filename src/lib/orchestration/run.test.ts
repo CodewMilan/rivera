@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createOrganizationFromIntake } from "@/lib/organizations/create";
-import { FakeLLMProvider } from "@/lib/providers/llm";
+import { FakeLLMProvider, defaultDemoResponder } from "@/lib/providers/llm";
 import { FakeHiggsfieldProvider } from "@/lib/providers/higgsfield";
 import { FakeSearchProvider } from "@/lib/tools/search";
 import { createMemoryStore, resetStore } from "@/lib/store";
@@ -148,6 +148,40 @@ describe("phase 2 orchestrator", () => {
       media: new FakeHiggsfieldProvider(),
     });
     expect(next.status).toBe("cancelled");
+  });
+});
+
+describe("phase 3 demo tools", () => {
+  beforeEach(() => {
+    resetStore();
+  });
+
+  it("uses labeled specialist fixtures, search, calculator, and media assets", async () => {
+    const store = createMemoryStore();
+    const org = await createOrganizationFromIntake(store, intake());
+    await createAndStartRun(
+      {
+        store,
+        llm: new FakeLLMProvider(defaultDemoResponder),
+        search: new FakeSearchProvider(),
+        media: new FakeHiggsfieldProvider(),
+      },
+      org.id,
+    );
+
+    const research = (await store.listAgents(org.id)).find((agent) => agent.type === "research");
+    expect(research?.lastAction).toMatch(/Soroban|debugging/i);
+    expect(research?.lastAction).not.toMatch(/Demo completion for/);
+
+    const events = await store.listEvents(org.id);
+    expect(events.some((event) => event.summary.includes("webSearch"))).toBe(true);
+    expect(events.some((event) => event.summary.includes("calculator"))).toBe(true);
+
+    const scored = (await store.listTasks(org.id)).filter((task) => task.evaluation?.score);
+    expect(scored.length).toBeGreaterThan(0);
+
+    const items = await store.listContentItems(org.id);
+    expect(items.some((item) => item.mediaAssetIds.length > 0)).toBe(true);
   });
 });
 

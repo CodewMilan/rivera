@@ -1,5 +1,6 @@
 import { agentOutputSchema, parseJsonFromModel } from "@/lib/agents/schema";
-import type { AgentOutput } from "@/types";
+import { demoCeoPlan, demoSpecialistOutput } from "@/lib/demo/fixtures";
+import type { AgentOutput, AgentType } from "@/types";
 
 export type LLMCompleteInput = {
   system: string;
@@ -113,16 +114,20 @@ export function parseAgentOutput(value: unknown): AgentOutput {
   return agentOutputSchema.parse(value);
 }
 
-function defaultDemoResponder(input: LLMCompleteInput): string {
-  return JSON.stringify({
-    status: "success",
-    summary: `Demo completion for: ${input.user.slice(0, 80)}`,
-    findings: [],
-    evidence: [],
-    risks: [],
-    recommendation: "Continue the Rivera run.",
-    confidence: 0.7,
-    artifacts: [],
-    estimatedCostCents: 2,
-  });
+export function defaultDemoResponder(input: LLMCompleteInput): string {
+  let goal = input.user;
+  try {
+    const parsed = JSON.parse(input.user) as { goal?: string };
+    if (parsed.goal) goal = parsed.goal;
+  } catch {
+    // The user payload is not always JSON; fall back to the raw prompt.
+  }
+
+  if (/Rivera CEO/i.test(input.system) || /organizationName/i.test(input.system)) {
+    return JSON.stringify(demoCeoPlan(goal));
+  }
+
+  const match = input.system.match(/You are the ([a-z_]+) agent/i);
+  const agentType = (match?.[1] ?? "ceo") as AgentType;
+  return JSON.stringify(demoSpecialistOutput(agentType, goal));
 }

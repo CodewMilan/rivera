@@ -4,11 +4,13 @@ import { AGENT_ROSTER, demoCeoPlan, demoContentItems, demoSpecialistOutput } fro
 import { appendEvent } from "@/lib/events/log";
 import { assembleReport, evaluateAgentOutput, rejectIfOverBudget } from "@/lib/evaluation/report";
 import { createId } from "@/lib/ids";
+import { settleMediaJob } from "@/lib/media/jobs";
 import { hasBlockingApproval, requestApproval } from "@/lib/approvals/engine";
 import { completeJson, parseAgentOutput, type LLMProvider } from "@/lib/providers/llm";
 import type { MediaProvider } from "@/lib/providers/higgsfield";
 import type { Store } from "@/lib/store";
 import { searchGithubIssues } from "@/lib/tools/github";
+import { calculate } from "@/lib/tools/calculator";
 import type { ResearchProvider } from "@/lib/tools/search";
 import type { AgentOutput, AgentType, Organization, Run, RunStatus, Task } from "@/types";
 import { assertTransition, isTerminal } from "./states";
@@ -88,6 +90,28 @@ async function executeAgentTask(
     await deps.store.updateAgent(agent.id, { status: "working", currentTaskId: task.id });
   }
 
+  const findings: unknown[] = [...extraFindings];
+  if (agentType === "finance" || agentType === "engineering") {
+    try {
+      const mediaCap = calculate("40 + 40");
+      findings.push({ tool: "calculator", expression: "40 + 40", result: mediaCap });
+      await appendEvent(deps.store, {
+        organizationId: org.id,
+        runId: run.id,
+        type: "tool.called",
+        summary: `calculator returned ${mediaCap}`,
+        payload: { tool: "calculator", result: mediaCap },
+      });
+    } catch (error) {
+      await appendEvent(deps.store, {
+        organizationId: org.id,
+        runId: run.id,
+        type: "tool.failed",
+        summary: `calculator failed: ${error instanceof Error ? error.message : "error"}`,
+      });
+    }
+  }
+
   const demo = demoSpecialistOutput(agentType, org.goal);
   let output: AgentOutput = { ...demo, taskId: task.id, agentType };
   let costCents = demo.estimatedCostCents;
@@ -104,16 +128,16 @@ async function executeAgentTask(
           budgetCents: org.budgetCents,
           deadline: org.deadline,
           task: { title: task.title, description: task.description },
-          extraFindings,
+          extraFindings: findings,
         }),
       },
       parseAgentOutput,
     );
-    output = { ...completed.value, taskId: task.id, agentType, findings: [...completed.value.findings, ...extraFindings] };
+    output = { ...completed.value, taskId: task.id, agentType, findings: [...completed.value.findings, ...findings] };
     costCents = completed.costCents;
     usedDemo = completed.demo;
   } catch {
-    output = { ...demo, taskId: task.id, agentType, findings: [...demo.findings, ...extraFindings] };
+    output = { ...demo, taskId: task.id, agentType, findings: [...demo.findings, ...findings] };
     usedDemo = true;
   }
 
@@ -145,9 +169,9 @@ async function executeAgentTask(
   });
 
   if (output.status === "failed") {
-    await failTask(deps.store, task.id, { ...output, evaluation });
+    await failTask(deps.store, task.id, output);
   } else {
-    await completeTask(deps.store, task.id, { ...output, evaluation }, costCents);
+    await completeTask(deps.store, task.id, output, costCents, evaluation);
   }
 
   return { org: charged.org, run: charged.run, output };
@@ -443,27 +467,18 @@ async function generateCampaignMedia(deps: OrchestratorDeps, org: Organization, 
     await appendEvent(deps.store, {
       organizationId: org.id,
       runId: run.id,
-      type: created.status === "completed" ? "media.job.completed" : "media.job.created",
+      type: "media.job.created",
       summary: `Higgsfield ${item.type} job ${created.status}`,
       payload: { jobId: job.id, providerJobId: created.providerJobId },
     });
 
-    if (created.status === "completed" && created.outputUrl) {
-      const asset = await deps.store.createAsset({
-        id: createId(),
-        organizationId: org.id,
-        url: created.outputUrl,
-        previewUrl: created.previewUrl,
-        kind: item.type === "video" ? "video" : "image",
-        provider: "higgsfield",
-        createdAt: nowIso(),
-      });
-      await deps.store.updateMediaJob(job.id, { outputAssetId: asset.id, status: "completed" });
-      await deps.store.updateContentItem(item.id, {
-        mediaAssetIds: [asset.id],
-        status: "review",
-      });
-      const charged = await addCost(deps.store, org, run, created.estimatedCostCents);
+    const settled = await settleMediaJob(deps.store, deps.media, job);
+    if (settled.status === "completed") {
+      const latest = await deps.store.getContentItem(item.id);
+      if (latest && latest.status === "draft") {
+        await deps.store.updateContentItem(item.id, { status: "review" });
+      }
+      const charged = await addCost(deps.store, org, run, settled.estimatedCostCents ?? created.estimatedCostCents);
       org = charged.org;
       run = charged.run;
     }

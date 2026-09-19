@@ -1,6 +1,6 @@
 import { nowIso } from "@/lib/clock";
 import type { Store } from "@/lib/store";
-import type { Task, TaskStatus } from "@/types";
+import type { Evaluation, Task, TaskStatus } from "@/types";
 
 const TASK_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
   todo: ["in_progress", "blocked", "failed"],
@@ -42,6 +42,7 @@ export async function completeTask(
   taskId: string,
   output: unknown,
   actualCostCents = 0,
+  evaluation?: Evaluation,
 ): Promise<Task> {
   const task = await store.getTask(taskId);
   if (!task) throw new Error("Task not found");
@@ -49,6 +50,7 @@ export async function completeTask(
   return store.updateTask(taskId, {
     status: "done",
     output,
+    evaluation,
     actualCostCents,
     updatedAt: nowIso(),
   });

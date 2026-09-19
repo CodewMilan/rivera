@@ -89,7 +89,7 @@ export async function createStandaloneMediaJob(
     payload: { jobId: job.id },
   });
 
-  return (await store.getMediaJob(job.id))!;
+  return settleMediaJob(store, media, (await store.getMediaJob(job.id))!);
 }
 
 export async function applyMediaWebhook(
@@ -117,7 +117,7 @@ export async function applyMediaWebhook(
           : existing.status;
   const outputUrl = payload.video?.url ?? payload.images?.[0]?.url ?? existing.outputUrl;
 
-  if (existing.status === "completed" && status === "completed") {
+  if (existing.status === "completed" && status === "completed" && existing.outputAssetId) {
     return existing;
   }
 
@@ -160,4 +160,52 @@ export async function applyMediaWebhook(
   });
 
   return next;
+}
+
+export async function settleMediaJob(
+  store: Store,
+  media: MediaProvider,
+  job: MediaJob,
+  attempts = 4,
+): Promise<MediaJob> {
+  if (job.status === "failed") return job;
+  if (job.status === "completed" && job.outputAssetId) return job;
+
+  if (job.status === "completed" && job.outputUrl && !job.outputAssetId) {
+    return applyMediaWebhook(store, webhookPayload(job, job));
+  }
+
+  let current = job;
+  const delayMs = process.env.VITEST ? 0 : 400;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const status = await media.getStatus(current.providerJobId);
+    if (status.status === "completed" || status.status === "failed") {
+      return applyMediaWebhook(store, webhookPayload(current, status));
+    }
+    current = await store.updateMediaJob(current.id, {
+      status: status.status,
+      outputUrl: status.outputUrl,
+      previewUrl: status.previewUrl,
+      error: status.error,
+      updatedAt: nowIso(),
+    });
+    if (delayMs) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  return current;
+}
+
+function webhookPayload(
+  job: MediaJob,
+  status: { outputUrl?: string; previewUrl?: string; error?: string; status?: string },
+) {
+  const url = status.outputUrl ?? status.previewUrl ?? job.outputUrl ?? job.previewUrl;
+  return {
+    request_id: job.providerJobId,
+    status: status.status ?? job.status,
+    images: url ? [{ url: status.previewUrl ?? url }] : undefined,
+    video: job.type === "video" && url ? { url } : undefined,
+    error: status.error,
+  };
 }

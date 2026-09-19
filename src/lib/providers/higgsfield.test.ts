@@ -1,10 +1,9 @@
 import { createHmac } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
-import { applyMediaWebhook } from "@/lib/media/jobs";
+import { applyMediaWebhook, createStandaloneMediaJob, settleMediaJob } from "@/lib/media/jobs";
 import { createMemoryStore, resetStore } from "@/lib/store";
 import { createOrganizationFromIntake } from "@/lib/organizations/create";
 import { FakeHiggsfieldProvider, verifyHiggsfieldSignature } from "./higgsfield";
-import { createStandaloneMediaJob } from "@/lib/media/jobs";
 
 describe("phase 3 Higgsfield adapter", () => {
   beforeEach(() => {
@@ -64,5 +63,25 @@ describe("phase 3 Higgsfield adapter", () => {
     });
     expect(first.id).toBe(second.id);
     expect(first.outputAssetId).toBe(second.outputAssetId);
+  });
+
+  it("polls a queued job until it completes", async () => {
+    const store = createMemoryStore();
+    const org = await createOrganizationFromIntake(store, {
+      goal: "Build a developer tool for Stellar developers",
+      deadline: "2026-10-19",
+      budgetUsd: 500,
+    });
+    const provider = new FakeHiggsfieldProvider({ completeImmediately: false });
+    const job = await createStandaloneMediaJob(store, provider, {
+      organizationId: org.id,
+      prompt: "queued still",
+      type: "image",
+    });
+    expect(job.status).toBe("queued");
+    provider.complete(job.providerJobId);
+    const settled = await settleMediaJob(store, provider, job);
+    expect(settled.status).toBe("completed");
+    expect(settled.outputAssetId).toBeTruthy();
   });
 });

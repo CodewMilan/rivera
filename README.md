@@ -2,7 +2,7 @@
 
 An AI product-launch organization for technical founders.
 
-**Current phase: 2 — Live organization.** A founder submits a goal, Rivera staffs specialist agents, and a run moves through research, debate, content, and review.
+**Current phase: 3 — Tools, media, and evaluation.** After a run starts, Rivera searches public sources, scores specialist output, generates Higgsfield previews, and waits for human review before anything publishes.
 
 ## Quick start
 
@@ -15,9 +15,9 @@ pnpm test
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), submit the demo goal, and watch the organization dashboard. Agents, tasks, and a timeline appear as the run progresses.
+Open [http://localhost:3000](http://localhost:3000), submit the demo goal, and watch the organization dashboard. Research evidence, scored tasks, and media previews appear as the run progresses.
 
-Leave `LLM_API_KEY` empty to run in demo mode with labeled fixtures. Set it to use a live OpenAI-compatible model.
+Leave `LLM_API_KEY` empty to run in demo mode with labeled fixtures. Set it to use a live OpenAI-compatible model. Optional: `TAVILY_API_KEY`, `GITHUB_TOKEN`, and Higgsfield keys for live tools and media.
 
 ## Persistence
 

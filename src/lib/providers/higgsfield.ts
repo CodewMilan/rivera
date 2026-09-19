@@ -31,10 +31,15 @@ export interface MediaProvider {
   cancel(providerJobId: string): Promise<void>;
 }
 
+export const DEMO_MEDIA_IMAGE = "/figma/img646B7Fb7Cd5C5Cfd37670871PromoteP800Png.png";
+export const DEMO_MEDIA_VIDEO_POSTER = "/figma/img6467Ac34Cc2Ce7B9D6Cde4BbDashboard201P1600Png.png";
+
 type FakeJob = MediaStatus & { estimatedCostCents: number };
 
 export class FakeHiggsfieldProvider implements MediaProvider {
   private readonly jobs = new Map<string, FakeJob>();
+
+  constructor(private readonly options: { completeImmediately?: boolean } = {}) {}
 
   async createVideo(input: MediaInput): Promise<CreatedMediaJob> {
     return this.create(input, "video");
@@ -66,7 +71,8 @@ export class FakeHiggsfieldProvider implements MediaProvider {
     const job = this.jobs.get(providerJobId);
     if (!job) throw new Error("Unknown Higgsfield job");
     job.status = "completed";
-    job.outputUrl = outputUrl ?? job.outputUrl;
+    job.outputUrl = outputUrl ?? job.outputUrl ?? DEMO_MEDIA_IMAGE;
+    job.previewUrl = job.previewUrl ?? job.outputUrl;
     return job;
   }
 
@@ -75,14 +81,13 @@ export class FakeHiggsfieldProvider implements MediaProvider {
       throw new Error("Media job exceeds cost ceiling");
     }
     const providerJobId = `hf_${createId()}`;
+    const done = this.options.completeImmediately !== false;
+    const previewUrl = kind === "video" ? DEMO_MEDIA_VIDEO_POSTER : DEMO_MEDIA_IMAGE;
     const job: FakeJob = {
       providerJobId,
-      status: "completed",
-      outputUrl:
-        kind === "video"
-          ? "https://files.rivera.test/demo/launch.mp4"
-          : "https://files.rivera.test/demo/launch.jpg",
-      previewUrl: "https://files.rivera.test/demo/launch.jpg",
+      status: done ? "completed" : "queued",
+      outputUrl: done ? previewUrl : undefined,
+      previewUrl: done ? previewUrl : undefined,
       estimatedCostCents: 40,
     };
     this.jobs.set(providerJobId, job);
