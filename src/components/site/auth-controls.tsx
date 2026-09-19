@@ -5,9 +5,9 @@ export function AuthNavLink() {
   return (
     <Show when="signed-out">
       <SignInButton>
-        <span className="inline-block cursor-pointer px-[15px] text-[15px] leading-[24px] text-[#f4f2f0]">
+        <button type="button" className="px-[15px] text-[15px] leading-[24px] text-[#f4f2f0]">
           Login
-        </span>
+        </button>
       </SignInButton>
     </Show>
   );
@@ -19,9 +19,12 @@ export function AuthActions() {
       <NavOutlineLink href="/#intake">Create an org</NavOutlineLink>
       <Show when="signed-out">
         <SignUpButton>
-          <span className="inline-flex cursor-pointer items-center justify-center rounded-[5px] border border-white bg-white px-[9.63px] py-px text-[13.4px] leading-[30.24px] text-[#221d2a]">
+          <button
+            type="button"
+            className="inline-flex items-center justify-center rounded-[5px] border border-white bg-white px-[9.63px] py-px text-[13.4px] leading-[30.24px] text-[#221d2a]"
+          >
             Sign up
-          </span>
+          </button>
         </SignUpButton>
       </Show>
       <Show when="signed-in">
