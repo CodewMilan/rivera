@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { money, shortDate } from "@/lib/format";
 import type { EventRecord, Organization } from "@/types";
 
@@ -14,15 +13,12 @@ export function OrganizationIntake({
 
   return (
     <div className="space-y-8">
-      <header className="border-b border-border pb-6">
-        <Link
-          href="/"
-          className="inline-flex min-h-11 items-center text-xs uppercase tracking-[0.2em] text-primary focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          Rivera
-        </Link>
-        <h1 className="mt-3 text-4xl font-semibold tracking-tight">{organization.name}</h1>
-        <p className="mt-3 max-w-2xl text-base leading-7 text-muted-foreground">{organization.goal}</p>
+      <header className="border-b border-white/10 pb-6">
+        <p className="text-[13.4px] leading-[30.24px] text-[#c2b8ff]">Intake</p>
+        <h1 className="mt-2 text-[49px] font-normal leading-[60px] tracking-[-1.62px] text-[#c2b8ff]">
+          <span className="text-[#f4f2f0]">{organization.name}</span>
+        </h1>
+        <p className="mt-3 max-w-2xl text-[19px] leading-[29.4px] text-[#928c97]">{organization.goal}</p>
       </header>
 
       <section className="grid gap-4 md:grid-cols-4">
@@ -33,7 +29,7 @@ export function OrganizationIntake({
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
-        <article className="rounded-xl border border-border bg-card p-5">
+        <article className="rounded-[10px] bg-[rgba(39,38,45,0.8)] p-5">
           <h2 className="text-sm font-medium">Organization</h2>
           <dl className="mt-4 space-y-3 text-sm">
             <Row label="Target user" value={organization.targetUser || "Not set"} />
@@ -42,7 +38,7 @@ export function OrganizationIntake({
             <Row label="Status" value={organization.status} />
           </dl>
         </article>
-        <article className="rounded-xl border border-border bg-card p-5">
+        <article className="rounded-[10px] bg-[rgba(39,38,45,0.8)] p-5">
           <h2 className="text-sm font-medium">What happens next</h2>
           <p className="mt-4 text-sm text-muted-foreground">
             This organization is saved. Agents, tasks, and a live run start in Phase 2.
@@ -51,7 +47,7 @@ export function OrganizationIntake({
         </article>
       </section>
 
-      <section className="rounded-xl border border-border bg-card p-5">
+      <section className="rounded-[10px] bg-[rgba(39,38,45,0.8)] p-5">
         <h2 className="text-sm font-medium">Recent activity</h2>
         {created.length === 0 ? (
           <p className="mt-4 text-sm text-muted-foreground">No activity yet.</p>
@@ -72,7 +68,7 @@ export function OrganizationIntake({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="rounded-[10px] bg-[rgba(39,38,45,0.8)] p-4">
       <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-2 font-mono text-lg tabular-nums capitalize">{value}</p>
     </div>

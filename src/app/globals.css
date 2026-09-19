@@ -1,49 +1,26 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f3eee4;
-  --foreground: #1b2421;
-  --card: #fffaf1;
-  --card-foreground: #1b2421;
-  --popover: #fffaf1;
-  --popover-foreground: #1b2421;
-  --primary: #1f6b63;
-  --primary-foreground: #f3eee4;
-  --secondary: #e7dfd1;
-  --secondary-foreground: #1b2421;
-  --muted: #e7dfd1;
-  --muted-foreground: #5b6662;
-  --accent: #c97848;
-  --accent-foreground: #fffaf1;
-  --destructive: #9b3a2f;
-  --border: #d7cfbf;
-  --input: #d7cfbf;
-  --ring: #1f6b63;
-  --sidebar: #17201d;
-  --sidebar-foreground: #ece6db;
-}
-
-[data-theme="dark"] {
-  --background: #101614;
-  --foreground: #ece6db;
-  --card: #18211e;
-  --card-foreground: #ece6db;
-  --popover: #18211e;
-  --popover-foreground: #ece6db;
-  --primary: #7dcdc0;
-  --primary-foreground: #10201c;
-  --secondary: #24302c;
-  --secondary-foreground: #ece6db;
-  --muted: #24302c;
-  --muted-foreground: #9aa39e;
-  --accent: #e0a077;
-  --accent-foreground: #1b140e;
+  --background: #0c0a10;
+  --foreground: #f4f2f0;
+  --card: #27262d;
+  --card-foreground: #f4f2f0;
+  --popover: #27262d;
+  --popover-foreground: #f4f2f0;
+  --primary: #c2b8ff;
+  --primary-foreground: #221d2a;
+  --secondary: #1f1c26;
+  --secondary-foreground: #f4f2f0;
+  --muted: #1f1c26;
+  --muted-foreground: #928c97;
+  --accent: #c2b8ff;
+  --accent-foreground: #221d2a;
   --destructive: #e08a7d;
-  --border: #2c3834;
-  --input: #2c3834;
-  --ring: #7dcdc0;
-  --sidebar: #0c1110;
-  --sidebar-foreground: #ece6db;
+  --border: rgba(194, 184, 255, 0.22);
+  --input: rgba(244, 242, 240, 0.16);
+  --ring: #c2b8ff;
+  --sidebar: #0c0a10;
+  --sidebar-foreground: #f4f2f0;
 }
 
 @theme inline {
@@ -67,8 +44,8 @@
   --color-ring: var(--ring);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
-  --font-serif: ui-serif, Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -84,15 +61,20 @@
 
 html,
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #0c0a10;
+  color: #f4f2f0;
 }
 
 body {
-  font-family: ui-sans-serif, system-ui, sans-serif;
   min-height: 100vh;
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--primary) 35%, transparent);
+  background: color-mix(in oklab, #c2b8ff 35%, transparent);
+}
+
+input,
+textarea,
+select {
+  color: #f4f2f0;
 }

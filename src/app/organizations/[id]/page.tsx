@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { OrganizationIntake } from "@/components/organization-intake";
+import { AppMain } from "@/components/site/site-chrome";
 import { getStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -12,8 +13,8 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
   const events = await store.listEvents(id);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10 md:px-6">
+    <AppMain>
       <OrganizationIntake organization={organization} events={events} />
-    </main>
+    </AppMain>
   );
 }

@@ -77,7 +77,7 @@ export function IntakeForm() {
           defaultValue={DEMO_GOAL}
           aria-invalid={Boolean(fieldErrors.goal)}
           aria-describedby={fieldErrors.goal ? "goal-error" : "goal-hint"}
-          className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="w-full rounded-[5px] border border-white/20 bg-[#1f1c26] px-3 py-2 text-sm text-[#f4f2f0] outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff]"
         />
         <p id="goal-hint" className="text-xs text-muted-foreground">
           One sentence Rivera can turn into an organization.
@@ -99,7 +99,7 @@ export function IntakeForm() {
             name="targetUser"
             defaultValue="Soroban developers"
             autoComplete="off"
-            className="min-h-11 w-full rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-h-11 w-full rounded-[5px] border border-white/20 bg-[#1f1c26] px-3 text-sm text-[#f4f2f0] outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff]"
           />
         </div>
         <div className="space-y-2">
@@ -113,7 +113,7 @@ export function IntakeForm() {
             required
             defaultValue="2026-10-19"
             aria-invalid={Boolean(fieldErrors.deadline)}
-            className="min-h-11 w-full rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-h-11 w-full rounded-[5px] border border-white/20 bg-[#1f1c26] px-3 text-sm text-[#f4f2f0] outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff]"
           />
           {fieldErrors.deadline ? <p className="text-xs text-destructive">{fieldErrors.deadline}</p> : null}
         </div>
@@ -127,7 +127,7 @@ export function IntakeForm() {
             inputMode="decimal"
             defaultValue="500"
             aria-invalid={Boolean(fieldErrors.budgetUsd)}
-            className="min-h-11 w-full rounded-lg border border-input bg-card px-3 font-mono text-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-h-11 w-full rounded-[5px] border border-white/20 bg-[#1f1c26] px-3 font-mono text-sm tabular-nums text-[#f4f2f0] outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff]"
           />
           {fieldErrors.budgetUsd ? <p className="text-xs text-destructive">{fieldErrors.budgetUsd}</p> : null}
         </div>
@@ -140,7 +140,7 @@ export function IntakeForm() {
             name="technology"
             defaultValue="TypeScript, Next.js, Stellar SDK"
             autoComplete="off"
-            className="min-h-11 w-full rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-h-11 w-full rounded-[5px] border border-white/20 bg-[#1f1c26] px-3 text-sm text-[#f4f2f0] outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff]"
           />
         </div>
       </div>
@@ -149,7 +149,7 @@ export function IntakeForm() {
         <legend className="text-sm font-medium">Preferred channels</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {CHANNELS.map((channel) => (
-            <label key={channel.id} className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm">
+            <label key={channel.id} className="flex min-h-11 items-center gap-3 rounded-[5px] border border-[#c2b8ff]/30 px-3 text-sm">
               <input
                 type="checkbox"
                 name={`channel-${channel.id}`}
@@ -170,7 +170,7 @@ export function IntakeForm() {
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60"
+        className="inline-flex items-center justify-center rounded-[5px] border border-white bg-white px-[21px] py-[6px] text-[15.6px] leading-[36.96px] text-[#221d2a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff] disabled:opacity-60"
       >
         {pending ? "Saving organization…" : "Create organization"}
       </button>

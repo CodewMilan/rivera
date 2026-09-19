@@ -86,11 +86,9 @@ export function OrgDashboard({
     <div className="space-y-8">
       <header className="flex flex-col gap-4 border-b border-border pb-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <Link href="/" className="text-xs uppercase tracking-[0.2em] text-primary">
-            Rivera
-          </Link>
-          <h1 className="mt-2 font-serif text-4xl">{organization.name}</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{organization.goal}</p>
+          <p className="text-[13.4px] leading-[30.24px] text-[#c2b8ff]">Organization</p>
+          <h1 className="mt-2 text-[49px] font-normal leading-[60px] tracking-[-1.62px] text-[#f4f2f0]">{organization.name}</h1>
+          <p className="mt-2 max-w-2xl text-[19px] leading-[29.4px] text-[#928c97]">{organization.goal}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge value={phaseLabel(run?.status)} tone="live" />
@@ -111,8 +109,8 @@ export function OrgDashboard({
             key={item.id}
             href={item.href}
             onClick={() => setTab(item.id)}
-            className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm focus-visible:ring-2 focus-visible:ring-ring ${
-              tab === item.id ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+            className={`inline-flex min-h-11 items-center rounded-[5px] px-4 text-sm focus-visible:ring-2 focus-visible:ring-[#c2b8ff] ${
+              tab === item.id ? "bg-white text-[#221d2a]" : "border border-[#c2b8ff] text-[#c2b8ff]"
             }`}
           >
             {item.label}
@@ -167,7 +165,7 @@ export function OrgDashboard({
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {agents.length === 0 ? <Empty label="Agents will appear after planning." /> : null}
           {agents.map((agent) => (
-            <article key={agent.id} className="rounded-xl border border-border bg-card p-5">
+            <article key={agent.id} className="rounded-[10px] bg-[rgba(39,38,45,0.8)] p-5">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="font-medium">{agent.name}</h3>
                 <StatusBadge value={agent.status} tone={toneForStatus(agent.status)} />
@@ -226,7 +224,7 @@ export function OrgDashboard({
             .slice()
             .reverse()
             .map((event) => (
-              <li key={event.id} className="rounded-xl border border-border bg-card px-4 py-3">
+              <li key={event.id} className="rounded-[10px] bg-[rgba(39,38,45,0.8)] px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm">{event.summary}</p>
                   <time className="font-mono text-xs text-muted-foreground">{shortDate(event.createdAt)}</time>
@@ -241,9 +239,9 @@ export function OrgDashboard({
         <div className="space-y-6">
           {decisions.length === 0 ? <Empty label="No decisions yet. Debate happens after feasibility." /> : null}
           {decisions.map((decision) => (
-            <article key={decision.id} className="rounded-xl border border-border bg-card p-6">
+            <article key={decision.id} className="rounded-[10px] bg-[rgba(39,38,45,0.8)] p-6">
               <div className="flex items-start justify-between gap-3">
-                <h2 className="font-serif text-2xl">{decision.question}</h2>
+                <h2 className="text-[29px] font-normal leading-[36px] text-[#f4f2f0]">{decision.question}</h2>
                 <StatusBadge value={decision.status} tone={toneForStatus(decision.status)} />
               </div>
               <ul className="mt-6 space-y-4">
@@ -269,7 +267,7 @@ export function OrgDashboard({
         <div className="grid gap-4">
           {contentItems.length === 0 ? <Empty label="Launch content appears after the social plan." /> : null}
           {contentItems.map((item) => (
-            <article key={item.id} className="rounded-xl border border-border bg-card p-5">
+            <article key={item.id} className="rounded-[10px] bg-[rgba(39,38,45,0.8)] p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.platform}</p>
@@ -319,8 +317,8 @@ export function OrgDashboard({
 
       {tab === "report" ? (
         report ? (
-          <article className="rounded-xl border border-border bg-card p-6">
-            <h2 className="font-serif text-3xl">Final recommendation</h2>
+          <article className="rounded-[10px] bg-[rgba(39,38,45,0.8)] p-6">
+            <h2 className="text-[49px] font-normal leading-[60px] tracking-[-1.62px] text-[#c2b8ff]">Final recommendation</h2>
             <div className="mt-6 grid gap-4 md:grid-cols-3">
               <Metric label="Opportunity" value={`${report.opportunityScore}`} />
               <Metric label="Evidence" value={`${report.evidenceQuality}`} />
@@ -352,7 +350,7 @@ export function OrgDashboard({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="rounded-[10px] bg-[rgba(39,38,45,0.8)] p-4">
       <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-2 font-mono text-lg tabular-nums">{value}</p>
     </div>
@@ -361,7 +359,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 function Panel({ title, children }: { title: string; children: import("react").ReactNode }) {
   return (
-    <section className="rounded-xl border border-border bg-card p-5">
+    <section className="rounded-[10px] bg-[rgba(39,38,45,0.8)] p-5">
       <h2 className="text-sm font-medium">{title}</h2>
       <div className="mt-4">{children}</div>
     </section>

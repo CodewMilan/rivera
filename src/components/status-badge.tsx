@@ -11,11 +11,11 @@ export function StatusBadge({
     <span
       className={cn(
         "inline-flex min-h-8 items-center rounded-full px-3 text-xs font-medium capitalize tracking-wide",
-        tone === "muted" && "bg-muted text-muted-foreground",
-        tone === "good" && "bg-primary/15 text-primary",
-        tone === "warn" && "bg-accent/15 text-accent",
+        tone === "muted" && "bg-[#1f1c26] text-[#928c97]",
+        tone === "good" && "bg-[#c2b8ff]/15 text-[#c2b8ff]",
+        tone === "warn" && "bg-white/10 text-[#f4f2f0]",
         tone === "bad" && "bg-destructive/15 text-destructive",
-        tone === "live" && "bg-primary text-primary-foreground",
+        tone === "live" && "bg-[#c2b8ff] text-[#221d2a]",
       )}
     >
       {value.replaceAll("_", " ")}

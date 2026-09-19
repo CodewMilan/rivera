@@ -1,10 +1,11 @@
 import { OrgDashboard } from "@/components/org-dashboard";
+import { AppMain } from "@/components/site/site-chrome";
 
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10 md:px-6">
+    <AppMain>
       <OrgDashboard organizationId={id} initialTab="report" />
-    </main>
+    </AppMain>
   );
 }
