@@ -1,3 +1,4 @@
+import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
@@ -20,7 +21,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${inter.className} h-full antialiased`}>
       <body className="min-h-full bg-[#0c0a10] text-[#f4f2f0]">
-        <SiteChrome>{children}</SiteChrome>
+        <ClerkProvider>
+          <SiteChrome>{children}</SiteChrome>
+        </ClerkProvider>
       </body>
     </html>
   );

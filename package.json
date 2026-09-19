@@ -13,6 +13,7 @@
     "migrate": "tsx --env-file=.env src/lib/database/migrate.ts"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.9.4",
     "clsx": "^2.1.1",
     "lucide-react": "^0.544.0",
     "next": "16.3.5",

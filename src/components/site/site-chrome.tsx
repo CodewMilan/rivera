@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { figma } from "@/lib/figma-assets";
 import { FigmaAsset } from "@/components/site/figma-asset";
-import { NavOutlineLink, NavSolidLink, OutlineButton, SolidButton } from "@/components/site/buttons";
+import { AuthActions, AuthNavLink } from "@/components/site/auth-controls";
+import { OutlineButton, SolidButton } from "@/components/site/buttons";
 import { DemoThumb, RiveraMark } from "@/components/site/rivera-mark";
 
 export function SiteChrome({ children }: { children: ReactNode }) {
@@ -65,14 +66,9 @@ function SiteHeader() {
         <Link href="/#grid" className="px-[15px] text-[15px] leading-[24px] text-[#f4f2f0]">
           Docs
         </Link>
-        <Link href="/#intake" className="px-[15px] text-[15px] leading-[24px] text-[#f4f2f0]">
-          Login
-        </Link>
+        <AuthNavLink />
       </nav>
-      <div className="flex items-center gap-2">
-        <NavOutlineLink href="/#intake">Create an org</NavOutlineLink>
-        <NavSolidLink href="/#intake">Book a demo</NavSolidLink>
-      </div>
+      <AuthActions />
     </header>
   );
 }
