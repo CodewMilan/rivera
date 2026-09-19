@@ -58,14 +58,19 @@ function Hero() {
           </OutlineButton>
         </div>
       </div>
-      <HeroDashboard />
-      <div id="intake" className="scroll-mt-24 rounded-[10px] bg-[rgba(39,38,45,0.8)] p-10">
-        <h2 className="text-[29px] font-normal leading-[36px] text-[#f4f2f0]">Create an organization</h2>
-        <p className="mt-2 text-[18px] leading-[24px] text-[#c2b8ff]">Phase 3 uses live tools, generates media, and scores the package.</p>
-        <div className="mt-8">
+      <div id="intake" className="mx-auto flex w-full max-w-[760px] scroll-mt-24 flex-col items-center text-center">
+        <p className="text-[13.4px] leading-[30.24px] text-[#c2b8ff]">Start a run</p>
+        <h2 className="mt-1 text-[40px] font-normal leading-[48px] tracking-[-1.2px] text-[#f4f2f0] md:text-[49px] md:leading-[60px] md:tracking-[-1.62px]">
+          What are you launching?
+        </h2>
+        <p className="mt-3 max-w-[520px] text-[16px] leading-[24px] text-[#928c97]">
+          One prompt. Rivera staffs the org, researches, and drafts the launch.
+        </p>
+        <div className="mt-8 w-full text-left">
           <IntakeForm />
         </div>
       </div>
+      <HeroDashboard />
     </section>
   );
 }
