@@ -35,7 +35,9 @@ export const clerkAppearance = {
     privacyPageUrl: "/#grid",
   },
   elements: {
-    rootBox: "mx-auto w-full",
+    rootBox: "mx-auto",
+    userButtonBox: "w-auto shrink-0",
+    userButtonTrigger: "w-auto",
     cardBox: "w-full shadow-none",
     card: "w-full border border-[rgba(194,184,255,0.22)] bg-[rgba(39,38,45,0.88)] shadow-none",
     headerTitle: "text-[29px] font-normal leading-[36px] tracking-[-0.4px] text-[#f4f2f0]",

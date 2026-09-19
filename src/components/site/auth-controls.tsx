@@ -15,13 +15,13 @@ export function AuthNavLink() {
 
 export function AuthActions() {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex shrink-0 items-center gap-2">
       <NavOutlineLink href="/#intake">Create an org</NavOutlineLink>
       <Show when="signed-out">
         <SignUpButton>
           <button
             type="button"
-            className="inline-flex items-center justify-center rounded-[5px] border border-white bg-white px-[9.63px] py-px text-[13.4px] leading-[30.24px] text-[#221d2a]"
+            className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-[5px] border border-white bg-white px-[9.63px] py-px text-[13.4px] leading-[30.24px] text-[#221d2a]"
           >
             Sign up
           </button>
@@ -31,6 +31,9 @@ export function AuthActions() {
         <UserButton
           appearance={{
             elements: {
+              rootBox: "mx-0 w-auto shrink-0",
+              userButtonBox: "w-auto shrink-0",
+              userButtonTrigger: "w-auto",
               avatarBox: "h-8 w-8",
             },
           }}

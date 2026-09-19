@@ -79,8 +79,15 @@ select {
   color: #f4f2f0;
 }
 
-.cl-rootBox {
+.auth-board .cl-rootBox {
   width: 100%;
+}
+
+.cl-userButton-root,
+.cl-userButtonBox {
+  width: auto !important;
+  max-width: none;
+  flex-shrink: 0;
 }
 
 .cl-cardBox,

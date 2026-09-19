@@ -7,9 +7,9 @@ const solid =
 const outline =
   "inline-flex items-center justify-center gap-[8.8px] rounded-[5px] border border-[#c2b8ff] px-[21px] py-[6px] text-[15.6px] leading-[36.96px] text-[#c2b8ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff]";
 const navSolid =
-  "inline-flex items-center justify-center rounded-[5px] border border-white bg-white px-[9.63px] py-px text-[13.4px] leading-[30.24px] text-[#221d2a]";
+  "inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-[5px] border border-white bg-white px-[9.63px] py-px text-[13.4px] leading-[30.24px] text-[#221d2a]";
 const navOutline =
-  "inline-flex items-center justify-center rounded-[5px] border border-[#c2b8ff] px-[9.63px] py-px text-[13.4px] leading-[30.24px] text-[#c2b8ff]";
+  "inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-[5px] border border-[#c2b8ff] px-[9.63px] py-px text-[13.4px] leading-[30.24px] text-[#c2b8ff]";
 
 export function SolidButton({
   href,
