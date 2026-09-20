@@ -30,7 +30,7 @@ export async function requestApproval(
   },
 ): Promise<Approval> {
   const existing = await store.findApproval(input.organizationId, input.targetId, input.actionType);
-  if (existing && existing.status === "pending" && !isExpired(existing.expiresAt)) {
+  if (existing && (existing.status === "pending" || existing.status === "approved") && !isExpired(existing.expiresAt)) {
     return existing;
   }
   const approval = await store.createApproval({

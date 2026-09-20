@@ -78,7 +78,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
 
 export function createLLMProvider(responder?: (input: LLMCompleteInput) => string): LLMProvider {
   const apiKey = process.env.LLM_API_KEY;
-  if (apiKey && !responder) {
+  if (apiKey && process.env.DEMO_MODE !== "true" && !responder) {
     return new OpenAICompatibleProvider({
       apiKey,
       baseUrl: process.env.LLM_BASE_URL ?? "https://api.openai.com/v1",

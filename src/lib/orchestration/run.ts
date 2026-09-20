@@ -517,6 +517,15 @@ export async function finishEvaluation(deps: OrchestratorDeps, org: Organization
   return run;
 }
 
+export async function completeAfterPublish(deps: OrchestratorDeps, org: Organization, run: Run): Promise<Run> {
+  let current = run;
+  if (current.status === "review") current = await transition(deps.store, current, "approval");
+  if (current.status === "approval" || current.status === "scheduled") {
+    current = await transition(deps.store, current, "published");
+  }
+  return finishEvaluation(deps, org, current);
+}
+
 export async function runOrganization(runId: string, deps: OrchestratorDeps): Promise<Run> {
   let run = await deps.store.getRun(runId);
   if (!run) throw new Error("Run not found");
@@ -533,7 +542,7 @@ export async function runOrganization(runId: string, deps: OrchestratorDeps): Pr
     if (run.costCents >= run.caps.maxCostCents) {
       return deps.store.updateRun(run.id, { status: "failed", error: "Maximum cost reached", updatedAt: nowIso() });
     }
-    if (Date.now() - Date.parse(run.startedAt) >= run.caps.maxDurationMs) {
+    if (process.env.DEMO_MODE !== "true" && Date.now() - Date.parse(run.startedAt) >= run.caps.maxDurationMs) {
       return deps.store.updateRun(run.id, { status: "failed", error: "Maximum duration reached", updatedAt: nowIso() });
     }
     if (await hasBlockingApproval(deps.store, org.id)) {

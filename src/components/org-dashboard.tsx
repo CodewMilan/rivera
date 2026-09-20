@@ -7,31 +7,37 @@ import { money, phaseLabel, shortDate } from "@/lib/format";
 import { evidenceFromEvents, toolMetricsFromEvents } from "@/lib/research/evidence";
 import type { Asset, OrganizationSnapshot } from "@/types";
 
-type Tab = "overview" | "agents" | "tasks" | "timeline" | "decisions" | "content" | "report";
+export type DashboardTab = "overview" | "agents" | "tasks" | "timeline" | "decisions" | "content" | "report";
 
 const launchingOrgs = new Set<string>();
 
 export function OrgDashboard({
   organizationId,
   initialTab = "overview",
+  initialSnapshot = null,
 }: {
   organizationId: string;
-  initialTab?: Tab;
+  initialTab?: DashboardTab;
+  initialSnapshot?: OrganizationSnapshot | null;
 }) {
-  const [snapshot, setSnapshot] = useState<OrganizationSnapshot | null>(null);
+  const [snapshot, setSnapshot] = useState<OrganizationSnapshot | null>(initialSnapshot);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>(initialTab);
+  const [tab, setTab] = useState<DashboardTab>(initialTab);
   const [busy, setBusy] = useState<string | null>(null);
 
   async function load() {
-    const response = await fetch(`/api/organizations/${organizationId}/snapshot`, { cache: "no-store" });
-    const data = await response.json();
-    if (!response.ok) {
-      setError(data.error ?? "Could not load organization");
-      return;
+    try {
+      const response = await fetch(`/api/organizations/${organizationId}/snapshot`, { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error ?? "Could not load organization");
+        return;
+      }
+      setSnapshot(data);
+      setError(null);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not load organization");
     }
-    setSnapshot(data);
-    setError(null);
   }
 
   useEffect(() => {
@@ -43,19 +49,27 @@ export function OrgDashboard({
   }, [organizationId]);
 
   useEffect(() => {
-    const hash = window.location.hash.replace("#", "") as Tab;
+    const hash = window.location.hash.replace("#", "") as DashboardTab;
     if (hash === "agents" || hash === "tasks" || hash === "timeline") setTab(hash);
   }, [organizationId]);
 
   async function act(path: string, id?: string) {
     setBusy(id ?? path);
-    await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    const data = await response.json().catch(() => ({}));
     await load();
+    if (!response.ok) {
+      setError(typeof data.error === "string" ? data.error : "Action failed");
+    }
     setBusy(null);
   }
 
   useEffect(() => {
-    if (!snapshot || snapshot.run || launchingOrgs.has(organizationId)) return;
+    if (!snapshot || launchingOrgs.has(organizationId)) return;
+    const waiting = ["review", "approval", "scheduled", "published", "evaluation", "complete", "failed", "cancelled"];
+    const needsLaunch = !snapshot.run;
+    const needsResume = Boolean(snapshot.run && !waiting.includes(snapshot.run.status) && snapshot.agents.length === 0);
+    if (!needsLaunch && !needsResume) return;
     launchingOrgs.add(organizationId);
     void act(`/api/organizations/${organizationId}/runs`, "start-run");
   }, [snapshot, organizationId]);
@@ -91,7 +105,7 @@ export function OrgDashboard({
   const assetsById = new Map(assets.map((asset) => [asset.id, asset]));
 
   const orgHref = `/organizations/${organizationId}`;
-  const tabs: Array<{ id: Tab; label: string; href: string }> = [
+  const tabs: Array<{ id: DashboardTab; label: string; href: string }> = [
     { id: "overview", label: "Overview", href: orgHref },
     { id: "agents", label: "Agents", href: `${orgHref}#agents` },
     { id: "tasks", label: "Tasks", href: `${orgHref}#tasks` },
@@ -112,14 +126,14 @@ export function OrgDashboard({
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge value={phaseLabel(run?.status)} tone="live" />
           {run?.demoMode ? <StatusBadge value="Demo mode" tone="warn" /> : run ? <StatusBadge value="Live providers" tone="good" /> : null}
-          {!run ? (
+          {busy === "start-run" ? <StatusBadge value="Launching agents" tone="live" /> : null}
+          {!run && busy !== "start-run" ? (
             <button
               type="button"
-              disabled={busy === "start-run"}
               onClick={() => void act(`/api/organizations/${organizationId}/runs`, "start-run")}
               className="inline-flex min-h-11 items-center rounded-[5px] border border-white bg-white px-4 text-sm text-[#221d2a] focus-visible:ring-2 focus-visible:ring-[#c2b8ff] disabled:opacity-60"
             >
-              {busy === "start-run" ? "Starting…" : "Launch agents"}
+              Launch agents
             </button>
           ) : null}
         </div>
@@ -152,6 +166,12 @@ export function OrgDashboard({
           </Link>
         ))}
       </nav>
+
+      {error ? (
+        <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
 
       {tab === "overview" ? (
         <div className="space-y-6">
@@ -381,31 +401,35 @@ export function OrgDashboard({
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className="min-h-11 rounded-lg bg-secondary px-4 text-sm focus-visible:ring-2 focus-visible:ring-ring"
+                  disabled={busy === item.id || item.status === "approved" || item.status === "published" || item.status === "scheduled"}
+                  className="min-h-11 rounded-lg bg-secondary px-4 text-sm focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
                   onClick={() => void act(`/api/content/items/${item.id}/approve`, item.id)}
                 >
-                  Approve
+                  {busy === item.id ? "Approving…" : item.status === "approved" ? "Approved" : "Approve"}
                 </button>
                 <button
                   type="button"
-                  className="min-h-11 rounded-lg bg-secondary px-4 text-sm focus-visible:ring-2 focus-visible:ring-ring"
+                  disabled={Boolean(busy) || item.status === "published"}
+                  className="min-h-11 rounded-lg bg-secondary px-4 text-sm focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
                   onClick={() => void act(`/api/content/items/${item.id}/reject`, `${item.id}-r`)}
                 >
                   Reject
                 </button>
                 <button
                   type="button"
-                  className="min-h-11 rounded-lg bg-secondary px-4 text-sm focus-visible:ring-2 focus-visible:ring-ring"
+                  disabled={Boolean(busy) || item.status === "published"}
+                  className="min-h-11 rounded-lg bg-secondary px-4 text-sm focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
                   onClick={() => void act(`/api/content/items/${item.id}/regenerate`, `${item.id}-g`)}
                 >
-                  Regenerate
+                  {busy === `${item.id}-g` ? "Regenerating…" : "Regenerate"}
                 </button>
                 <button
                   type="button"
-                  className="min-h-11 rounded-lg bg-primary px-4 text-sm text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  disabled={busy === `${item.id}-p` || item.status === "published" || (item.status !== "approved" && item.status !== "scheduled")}
+                  className="min-h-11 rounded-lg bg-primary px-4 text-sm text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
                   onClick={() => void act(`/api/content/items/${item.id}/publish`, `${item.id}-p`)}
                 >
-                  Publish
+                  {busy === `${item.id}-p` ? "Publishing…" : item.status === "published" ? "Published" : "Publish"}
                 </button>
               </div>
             </article>

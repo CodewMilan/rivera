@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { decideApproval, requestApproval } from "@/lib/approvals/engine";
 import { publishContent, reviewContent } from "@/lib/content/actions";
 import { createId } from "@/lib/ids";
 import { createOrganizationFromIntake } from "@/lib/organizations/create";
@@ -33,13 +32,6 @@ describe("phase 6 social publisher", () => {
       status: "review",
     });
     await reviewContent(store, item.id, "approve");
-    const approval = await requestApproval(store, {
-      organizationId: org.id,
-      actionType: "publish_social_post",
-      targetId: item.id,
-      summary: "Publish X",
-    });
-    await decideApproval(store, approval.id, "approved");
     const published = await publishContent(store, new DemoSocialPublisher(), item.id, "now");
     expect(published.status).toBe("published");
     expect(published.demoPublished).toBe(true);

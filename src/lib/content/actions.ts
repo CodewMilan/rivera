@@ -1,5 +1,5 @@
 import { appendEvent } from "@/lib/events/log";
-import { assertApproved, requestApproval } from "@/lib/approvals/engine";
+import { assertApproved, decideApproval, requestApproval } from "@/lib/approvals/engine";
 import { createStandaloneMediaJob } from "@/lib/media/jobs";
 import { isDemoPublisher, type SocialPublisher } from "@/lib/providers/social";
 import type { MediaProvider } from "@/lib/providers/higgsfield";
@@ -28,6 +28,21 @@ export async function reviewContent(
     await store.updateContentItem(itemId, { status: "review" });
   }
   const next = await store.updateContentItem(itemId, { status: nextStatus });
+  if (action === "approve") {
+    const gate = await store.findApproval(item.organizationId, itemId, "publish_social_post");
+    if (gate?.status === "pending") {
+      await decideApproval(store, gate.id, "approved");
+    } else if (!gate) {
+      await requestApproval(store, {
+        organizationId: item.organizationId,
+        actionType: "publish_social_post",
+        targetId: itemId,
+        summary: `Publish ${item.platform} post: ${item.title}`,
+        payload: { platform: item.platform },
+        autoGrant: true,
+      });
+    }
+  }
   await appendEvent(store, {
     organizationId: item.organizationId,
     type: action === "approve" ? "content.approved" : "content.rejected",
