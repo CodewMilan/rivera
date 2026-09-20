@@ -1,22 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { Show, useUser } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 import { RiveraMark } from "@/components/site/rivera-mark";
 import type { HomeOverview } from "@/lib/home/overview";
 
 export function HeroDashboard() {
-  return (
-    <>
-      <Show when="signed-out">
-        <DashboardCard view={STOCK_VIEW} />
-      </Show>
-      <Show when="signed-in">
-        <LiveHeroDashboard />
-      </Show>
-    </>
-  );
+  const { isLoaded, isSignedIn } = useUser();
+  if (!isLoaded) {
+    return (
+      <DashboardCard
+        view={{
+          orgSlug: "loading",
+          orgName: "Loading organization",
+          initial: "R",
+          orgHref: "#intake",
+          metrics: { tasksThisWeek: "—", successRate: "—", avgRunTime: "—" },
+          agents: [],
+          runs: [],
+          agentNames: [],
+        }}
+        loading
+      />
+    );
+  }
+  if (!isSignedIn) return <DashboardCard view={STOCK_VIEW} />;
+  return <LiveHeroDashboard />;
 }
 
 function LiveHeroDashboard() {
@@ -25,11 +35,15 @@ function LiveHeroDashboard() {
   const [orgId, setOrgId] = useState<string | undefined>();
 
   async function load(nextOrgId?: string) {
-    const query = nextOrgId ? `?orgId=${encodeURIComponent(nextOrgId)}` : "";
-    const response = await fetch(`/api/home/overview${query}`, { cache: "no-store" });
-    const data = (await response.json()) as HomeOverview;
-    setOverview(data);
-    if (data.selected?.id) setOrgId(data.selected.id);
+    try {
+      const query = nextOrgId ? `?orgId=${encodeURIComponent(nextOrgId)}` : "";
+      const response = await fetch(`/api/home/overview${query}`, { cache: "no-store" });
+      const data = (await response.json()) as HomeOverview;
+      setOverview(data);
+      if (data.selected?.id) setOrgId(data.selected.id);
+    } catch {
+      setOverview({ signedIn: true, organizations: [] });
+    }
   }
 
   useEffect(() => {

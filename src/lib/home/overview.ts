@@ -76,11 +76,12 @@ export function pickOrganizationsForUser(orgs: Organization[], userId?: string):
   return mine.length ? mine : sorted;
 }
 
-function agentStatusLabel(status: Agent["status"]): string {
-  if (status === "working") return "Running";
-  if (status === "failed") return "Failed";
-  if (status === "blocked" || status === "review") return "Needs review";
-  return "Successful";
+function agentStatusLabel(agent: Agent): string {
+  if (agent.status === "working") return "Running";
+  if (agent.status === "failed") return "Failed";
+  if (agent.status === "blocked" || agent.status === "review") return "Needs review";
+  if (agent.lastAction) return "Successful";
+  return "Idle";
 }
 
 function runStatusLabel(status: Run["status"]): string {
@@ -143,7 +144,7 @@ export async function buildHomeOverview(
     agents: agents.slice(0, 4).map((agent) => ({
       id: agent.id,
       name: agent.name,
-      status: agentStatusLabel(agent.status),
+      status: agentStatusLabel(agent),
       when: relativeTime(latest?.updatedAt, now),
       detail: agent.lastAction?.slice(0, 48) || agent.type,
     })),

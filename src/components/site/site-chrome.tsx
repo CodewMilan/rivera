@@ -39,7 +39,7 @@ function AlertBanner() {
   return (
     <div className="flex flex-col items-center bg-[#c2b8ff]" data-name="div.alert_banner">
       <a
-        href="#features"
+        href="/#features"
         className="flex w-full max-w-[1370px] items-center justify-center gap-[13.99px] px-[30px] py-[8px] rounded-[1px]"
       >
         <span className="rounded-[4px] bg-[#f4f2f0] px-[7px] text-[12px] capitalize leading-[24px] text-[#0c0a10]">
@@ -56,6 +56,9 @@ function AlertBanner() {
 }
 
 function SiteHeader() {
+  const pathname = usePathname();
+  const onPricing = pathname === "/pricing";
+
   return (
     <header className="relative z-20 mx-auto flex h-[64px] w-full max-w-[1370px] items-center justify-between px-[30px]" data-name="Banner">
       <Link href="/" className="flex items-center" aria-label="Rivera home">
@@ -69,7 +72,11 @@ function SiteHeader() {
           </span>
         </Link>
         <FigmaAsset src={figma.littleStar} alt="" width={10} height={10} className="opacity-[0.28]" />
-        <Link href="/#intake" className="px-[15px] text-[14px] leading-[24px] text-[#f4f2f0]">
+        <Link
+          href="/pricing"
+          aria-current={onPricing ? "page" : undefined}
+          className={onPricing ? "px-[15px] text-[14px] leading-[24px] text-[#c2b8ff]" : "px-[15px] text-[14px] leading-[24px] text-[#f4f2f0]"}
+        >
           Pricing
         </Link>
         <Link href="/#grid" className="px-[15px] text-[15px] leading-[24px] text-[#f4f2f0]">
@@ -130,6 +137,9 @@ function SiteFooter() {
             <a href="https://x.com" aria-label="X">
               <FigmaAsset src={figma.iconTwitter} alt="" width={21} height={21} />
             </a>
+            <Link href="/pricing" className="text-[13px] leading-[24px] text-[#928c97]">
+              Pricing
+            </Link>
             <Link href="/#features" className="text-[13px] leading-[24px] text-[#928c97]">
               Blog
             </Link>
