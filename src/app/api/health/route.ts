@@ -11,6 +11,7 @@ export async function GET() {
     demoMode: process.env.DEMO_MODE === "true" || !process.env.LLM_API_KEY ? "true" : "false",
     clerk: process.env.CLERK_SECRET_KEY ? "configured" : "missing",
     gmail: process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? "configured" : "missing",
+    s3: process.env.S3_BUCKET ? "configured" : "missing",
   };
 
   if (memory) {

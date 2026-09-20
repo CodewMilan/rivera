@@ -5,6 +5,7 @@ import { StatusBadge, toneForStatus } from "@/components/status-badge";
 import type { BuildConfig, BuildRun, GitHubRepoSummary, GitHubStatus } from "@/types";
 
 const CURSOR_MODELS = ["composer-2", "composer-2.5"];
+const CURSOR_KEYS_URL = "https://cursor.com/dashboard/api";
 
 type BuildBoardData = {
   organizationId: string;
@@ -16,14 +17,14 @@ type BuildBoardData = {
 async function apiFetch(path: string, init?: RequestInit): Promise<unknown> {
   const response = await fetch(path, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
+    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = typeof data === "object" && data && "error" in data ? String((data as { error: unknown }).error) : "Request failed";
+    const message =
+      typeof data === "object" && data && "error" in data
+        ? String((data as { error: unknown }).error)
+        : "Request failed";
     throw new Error(message);
   }
   return data;
@@ -37,6 +38,7 @@ export function OrgBuild({ data }: { data: BuildBoardData }) {
   const [reposLoading, setReposLoading] = useState(false);
   const [reposError, setReposError] = useState<string | null>(null);
   const [cursorKeyInput, setCursorKeyInput] = useState("");
+  const [showCursorPaste, setShowCursorPaste] = useState(false);
   const [brief, setBrief] = useState<string>("");
   const [briefLoading, setBriefLoading] = useState(false);
   const [model, setModel] = useState(CURSOR_MODELS[0]);
@@ -56,7 +58,11 @@ export function OrgBuild({ data }: { data: BuildBoardData }) {
     if (gh) {
       setError(`GitHub: ${gh.replaceAll("_", " ")}`);
       params.delete("github");
-      window.history.replaceState(null, "", `${window.location.pathname}${params.toString() ? `?${params}` : ""}`);
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${params.toString() ? `?${params}` : ""}`,
+      );
     }
   }, []);
 
@@ -91,8 +97,8 @@ export function OrgBuild({ data }: { data: BuildBoardData }) {
     }
   }
 
-  async function saveConfig(patch: Record<string, unknown>) {
-    setBusy("config");
+  async function saveConfig(patch: Record<string, unknown>, label = "config") {
+    setBusy(label);
     setError(null);
     try {
       const data = (await apiFetch(`/api/organizations/${config.organizationId}/build/config`, {
@@ -102,10 +108,31 @@ export function OrgBuild({ data }: { data: BuildBoardData }) {
       setConfig(data.config);
       setNotice("Saved");
       window.setTimeout(() => setNotice(null), 2000);
+      return data.config;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Save failed");
+      return null;
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function connectCursor() {
+    if (!cursorKeyInput.trim()) {
+      setError("Paste the key you copied from Cursor");
+      return;
+    }
+    const result = await saveConfig({ cursorApiKey: cursorKeyInput }, "cursor-connect");
+    if (result?.cursorApiKeySet) {
+      setCursorKeyInput("");
+      setShowCursorPaste(false);
+    }
+  }
+
+  function openCursorKeys() {
+    setShowCursorPaste(true);
+    if (typeof window !== "undefined") {
+      window.open(CURSOR_KEYS_URL, "_blank", "noopener,noreferrer");
     }
   }
 
@@ -173,8 +200,8 @@ export function OrgBuild({ data }: { data: BuildBoardData }) {
           Ship the plan with Cursor
         </h1>
         <p className="mt-2 max-w-2xl text-[15px] leading-[24px] text-[#928c97]">
-          Rivera compiles the research, strategy, and engineering plan into one brief and sends it to a Cursor cloud agent.
-          The agent runs on a Cursor VM, writes code against your GitHub repo, and opens a pull request. You keep your keys and your code.
+          Rivera compiles research, strategy, and engineering into one brief and hands it to a Cursor cloud agent.
+          The agent runs on a Cursor VM, writes code against your GitHub repo, and opens a pull request.
         </p>
       </header>
 
@@ -186,10 +213,13 @@ export function OrgBuild({ data }: { data: BuildBoardData }) {
       {notice ? <p className="text-xs text-[#c2b8ff]">{notice}</p> : null}
 
       <section className="grid gap-6 lg:grid-cols-2">
-        <Panel title="1. Connect GitHub">
+        <Panel
+          title="1. Connect GitHub"
+          badge={github.connected ? <StatusBadge value="connected" tone="good" /> : null}
+        >
           {!github.configured ? (
             <p className="text-sm text-muted-foreground">
-              Set <code>GITHUB_OAUTH_CLIENT_ID</code> and <code>GITHUB_OAUTH_CLIENT_SECRET</code> to enable this.
+              GitHub OAuth is not configured on this deployment.
             </p>
           ) : github.connected ? (
             <div className="space-y-3">
@@ -224,38 +254,90 @@ export function OrgBuild({ data }: { data: BuildBoardData }) {
           )}
         </Panel>
 
-        <Panel title="2. Cursor API key">
-          <p className="text-xs text-muted-foreground">
-            Create a key at <a href="https://cursor.com/dashboard/integrations" target="_blank" rel="noreferrer" className="underline">cursor.com/dashboard/integrations</a>. It stays scoped to your account and is used only when you dispatch a build.
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <input
-              type="password"
-              value={cursorKeyInput}
-              onChange={(event) => setCursorKeyInput(event.target.value)}
-              placeholder={config.cursorApiKeySet ? "•••••••• (already saved)" : "cursor_..."}
-              className="min-h-11 flex-1 rounded-lg border border-border bg-transparent px-3 font-mono text-sm"
-            />
-            <button
-              type="button"
-              disabled={!cursorKeyInput.trim() || busy === "config"}
-              onClick={() => {
-                void saveConfig({ cursorApiKey: cursorKeyInput }).then(() => setCursorKeyInput(""));
-              }}
-              className="min-h-11 rounded-lg bg-primary px-3 text-xs text-primary-foreground disabled:opacity-40"
-            >
-              Save
-            </button>
-            {config.cursorApiKeySet ? (
+        <Panel
+          title="2. Connect Cursor"
+          badge={config.cursorApiKeySet ? <StatusBadge value="connected" tone="good" /> : null}
+        >
+          {config.cursorApiKeySet ? (
+            <div className="space-y-3">
+              <p className="text-sm">
+                Connected as{" "}
+                <span className="font-mono">{config.cursorAccountLabel ?? "Cursor account"}</span>
+              </p>
+              {config.cursorConnectedAt ? (
+                <p className="text-xs text-muted-foreground">
+                  Connected {new Date(config.cursorConnectedAt).toLocaleString()}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={openCursorKeys}
+                  className="min-h-11 rounded-lg border border-[#c2b8ff] px-3 text-xs text-[#c2b8ff]"
+                >
+                  Rotate key
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void saveConfig({ clearCursorApiKey: true }, "cursor-forget")}
+                  disabled={busy === "cursor-forget"}
+                  className="min-h-11 rounded-lg border border-border px-3 text-xs"
+                >
+                  Disconnect
+                </button>
+              </div>
+            </div>
+          ) : !showCursorPaste ? (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                We open Cursor's API Keys page in a new tab. Create a key, come back, and paste it here — we verify it against Cursor and encrypt it at rest.
+              </p>
               <button
                 type="button"
-                onClick={() => void saveConfig({ clearCursorApiKey: true })}
-                className="min-h-11 rounded-lg border border-border px-3 text-xs"
+                onClick={openCursorKeys}
+                className="inline-flex min-h-11 items-center rounded-[5px] bg-white px-4 text-sm text-[#221d2a]"
               >
-                Forget
+                Connect Cursor
               </button>
-            ) : null}
-          </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Cursor opened in a new tab. On that page, click <span className="font-medium">New API Key</span>, copy the key, and paste it below.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="password"
+                  autoFocus
+                  value={cursorKeyInput}
+                  onChange={(event) => setCursorKeyInput(event.target.value)}
+                  placeholder="crsr_..."
+                  className="min-h-11 flex-1 rounded-lg border border-border bg-transparent px-3 font-mono text-sm"
+                />
+                <button
+                  type="button"
+                  disabled={!cursorKeyInput.trim() || busy === "cursor-connect"}
+                  onClick={() => void connectCursor()}
+                  className="min-h-11 rounded-lg bg-primary px-3 text-xs text-primary-foreground disabled:opacity-40"
+                >
+                  {busy === "cursor-connect" ? "Verifying…" : "Verify and connect"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCursorPaste(false);
+                    setCursorKeyInput("");
+                  }}
+                  className="min-h-11 rounded-lg border border-border px-3 text-xs"
+                >
+                  Cancel
+                </button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Rivera never displays the key back. We hit Cursor's <code>/v1/me</code> to verify it and store an AES-256-GCM ciphertext.
+              </p>
+            </div>
+          )}
         </Panel>
 
         <Panel title="3. Pick a repo">
@@ -320,7 +402,7 @@ export function OrgBuild({ data }: { data: BuildBoardData }) {
             ))}
           </select>
           <p className="mt-3 text-xs text-muted-foreground">
-            The Cursor cloud agent runs the same coding loop as the IDE. Any run started here also appears in your Cursor Agents window so you can watch or take over.
+            Runs started here also appear in the Cursor Agents window, so you can watch or take over.
           </p>
         </Panel>
       </section>
@@ -354,7 +436,7 @@ export function OrgBuild({ data }: { data: BuildBoardData }) {
         />
         {!canStart ? (
           <p className="mt-2 text-xs text-muted-foreground">
-            Add a Cursor API key and pick a repo to enable dispatch.
+            Connect Cursor and pick a repo to enable dispatch.
           </p>
         ) : null}
       </section>
@@ -376,9 +458,7 @@ export function OrgBuild({ data }: { data: BuildBoardData }) {
                 </div>
                 <StatusBadge value={build.status} tone={toneForStatus(build.status)} />
               </div>
-              {build.summary ? (
-                <p className="mt-2 text-xs text-muted-foreground">{build.summary}</p>
-              ) : null}
+              {build.summary ? <p className="mt-2 text-xs text-muted-foreground">{build.summary}</p> : null}
               {build.error ? <p className="mt-2 text-xs text-destructive">{build.error}</p> : null}
               <div className="mt-3 flex flex-wrap gap-3 text-xs">
                 {build.prUrl ? (
@@ -407,10 +487,21 @@ export function OrgBuild({ data }: { data: BuildBoardData }) {
   );
 }
 
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+function Panel({
+  title,
+  children,
+  badge,
+}: {
+  title: string;
+  children: React.ReactNode;
+  badge?: React.ReactNode;
+}) {
   return (
     <section className="rounded-[10px] bg-[rgba(39,38,45,0.8)] p-5">
-      <h2 className="text-sm font-medium">{title}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-medium">{title}</h2>
+        {badge}
+      </div>
       <div className="mt-3">{children}</div>
     </section>
   );

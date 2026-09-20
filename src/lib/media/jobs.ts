@@ -3,8 +3,9 @@ import { appendEvent } from "@/lib/events/log";
 import { createId } from "@/lib/ids";
 import { requestApproval } from "@/lib/approvals/engine";
 import type { MediaProvider } from "@/lib/providers/higgsfield";
+import { persistMediaUrl } from "@/lib/storage/s3";
 import type { Store } from "@/lib/store";
-import type { MediaJob } from "@/types";
+import type { Asset, MediaJob } from "@/types";
 
 export async function createStandaloneMediaJob(
   store: Store,
@@ -62,24 +63,15 @@ export async function createStandaloneMediaJob(
   });
 
   if (created.status === "completed" && created.outputUrl) {
-    const asset = await store.createAsset({
-      id: createId(),
-      organizationId: input.organizationId,
-      url: created.outputUrl,
+    const asset = await attachOutputAsset(store, job, {
+      outputUrl: created.outputUrl,
       previewUrl: created.previewUrl,
-      kind: input.type,
-      provider: "higgsfield",
-      createdAt: nowIso(),
     });
-    await store.updateMediaJob(job.id, { outputAssetId: asset.id });
-    if (input.contentItemId) {
-      const item = await store.getContentItem(input.contentItemId);
-      if (item) {
-        await store.updateContentItem(item.id, {
-          mediaAssetIds: [...item.mediaAssetIds, asset.id],
-        });
-      }
-    }
+    await store.updateMediaJob(job.id, {
+      outputAssetId: asset.id,
+      outputUrl: asset.url,
+      previewUrl: asset.previewUrl,
+    });
   }
 
   await appendEvent(store, {
@@ -122,31 +114,22 @@ export async function applyMediaWebhook(
   }
 
   let outputAssetId = existing.outputAssetId;
+  let durableOutput = outputUrl;
+  let durablePreview = payload.images?.[0]?.url ?? existing.previewUrl;
   if (status === "completed" && outputUrl && !outputAssetId) {
-    const asset = await store.createAsset({
-      id: createId(),
-      organizationId: existing.organizationId,
-      url: outputUrl,
+    const asset = await attachOutputAsset(store, existing, {
+      outputUrl,
       previewUrl: payload.images?.[0]?.url ?? outputUrl,
-      kind: existing.type === "video" ? "video" : "image",
-      provider: "higgsfield",
-      createdAt: nowIso(),
     });
     outputAssetId = asset.id;
-    if (existing.contentItemId) {
-      const item = await store.getContentItem(existing.contentItemId);
-      if (item) {
-        await store.updateContentItem(item.id, {
-          mediaAssetIds: [...item.mediaAssetIds, asset.id],
-          status: item.status === "draft" ? "review" : item.status,
-        });
-      }
-    }
+    durableOutput = asset.url;
+    durablePreview = asset.previewUrl;
   }
 
   const next = await store.updateMediaJob(existing.id, {
     status,
-    outputUrl,
+    outputUrl: durableOutput,
+    previewUrl: durablePreview,
     outputAssetId,
     error: payload.error,
     updatedAt: nowIso(),
@@ -194,6 +177,65 @@ export async function settleMediaJob(
     }
   }
   return current;
+}
+
+async function attachOutputAsset(
+  store: Store,
+  job: Pick<MediaJob, "organizationId" | "contentItemId" | "type">,
+  urls: { outputUrl: string; previewUrl?: string },
+): Promise<Asset> {
+  const assetId = createId();
+  const kind = job.type === "video" ? "video" : "image";
+  const url = await durableMediaUrl({
+    organizationId: job.organizationId,
+    assetId,
+    sourceUrl: urls.outputUrl,
+    kind,
+  });
+  const previewSource = urls.previewUrl && urls.previewUrl !== urls.outputUrl ? urls.previewUrl : undefined;
+  const previewUrl = previewSource
+    ? await durableMediaUrl({
+        organizationId: job.organizationId,
+        assetId: `${assetId}-preview`,
+        sourceUrl: previewSource,
+        kind: "image",
+      })
+    : url;
+
+  const asset = await store.createAsset({
+    id: assetId,
+    organizationId: job.organizationId,
+    url,
+    previewUrl,
+    kind,
+    provider: "higgsfield",
+    createdAt: nowIso(),
+  });
+
+  if (job.contentItemId) {
+    const item = await store.getContentItem(job.contentItemId);
+    if (item && !item.mediaAssetIds.includes(asset.id)) {
+      await store.updateContentItem(item.id, {
+        mediaAssetIds: [...item.mediaAssetIds, asset.id],
+        status: item.status === "draft" ? "review" : item.status,
+      });
+    }
+  }
+
+  return asset;
+}
+
+async function durableMediaUrl(input: {
+  organizationId: string;
+  assetId: string;
+  sourceUrl: string;
+  kind: "image" | "video";
+}): Promise<string> {
+  try {
+    return await persistMediaUrl(input);
+  } catch {
+    return input.sourceUrl;
+  }
 }
 
 function webhookPayload(

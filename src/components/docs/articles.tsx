@@ -264,8 +264,9 @@ function Content() {
       <p>Hackathon support: X, LinkedIn, Instagram Reels, TikTok. Types: text, image, video, carousel.</p>
       <h2>Media</h2>
       <p>
-        Higgsfield jobs are asynchronous. Rivera stores the provider job id, waits for a webhook or poll, saves the
-        asset, and attaches a preview. Cost ceilings apply per job. Secrets stay server-side.
+        Higgsfield jobs are asynchronous. Rivera stores the provider job id, waits for a webhook or poll, copies the
+        file into S3 when <InlineCode>S3_BUCKET</InlineCode> is set, and attaches a preview. Local demo fixtures stay
+        on disk. Cost ceilings apply per job. Secrets stay server-side.
       </p>
       <p>
         On the Content tab you can edit, approve, reject, regenerate, schedule, or publish. Demo publishing is labeled.
@@ -324,6 +325,8 @@ function Environment() {
           ["LLM_API_KEY", "No", "Empty = demo fixtures"],
           ["TAVILY_API_KEY / GITHUB_TOKEN", "No", "Live research tools"],
           ["HIGGSFIELD_API_KEY_ID / SECRET", "No", "Live media"],
+          ["S3_BUCKET / AWS_REGION / AWS keys", "No", "Copy completed media into S3"],
+          ["S3_PUBLIC_BASE_URL", "No", "CloudFront or custom media origin"],
           ["GOOGLE_CLIENT_ID / SECRET", "No", "Gmail inbox"],
           ["X_API_KEY and tokens", "No", "Live X publish"],
           ["DEMO_MODE / AUTO_PUBLISH", "No", "Force fixtures / opt-in publish"],
@@ -334,6 +337,8 @@ function Environment() {
         Vercel plus hosted Postgres (Neon, Supabase, or Vercel Postgres) is the default. Use the pooled connection
         string with <InlineCode>sslmode=require</InlineCode>. After deploy, set <InlineCode>APP_URL</InlineCode> to the
         production origin and hit <InlineCode>/api/health</InlineCode>. It should report store postgres and database ok.
+        Set <InlineCode>S3_BUCKET</InlineCode> if completed Higgsfield files should live in AWS instead of on provider
+        URLs.
       </p>
       <CodeBlock>{`docker build -t rivera .
 docker run --env-file .env -p 3000:3000 rivera`}</CodeBlock>

@@ -1,5 +1,6 @@
 import { resetStore } from "@/lib/store";
 import { setRuntimeOverride } from "@/lib/runtime";
+import { setMediaPersister } from "@/lib/storage/s3";
 
 process.env.RIVERA_STORE = "memory";
 process.env.DEMO_MODE = "true";
@@ -11,6 +12,9 @@ delete process.env.X_API_KEY;
 delete process.env.X_API_SECRET;
 delete process.env.X_ACCESS_TOKEN;
 delete process.env.X_ACCESS_TOKEN_SECRET;
+delete process.env.S3_BUCKET;
+delete process.env.S3_PUBLIC_BASE_URL;
 
 resetStore();
 setRuntimeOverride(null);
+setMediaPersister(null);

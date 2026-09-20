@@ -3,6 +3,8 @@ import { errorJson, json, statusFromError } from "@/lib/http/json";
 import { verifyHiggsfieldSignature } from "@/lib/providers/higgsfield";
 import { getStore } from "@/lib/store";
 
+export const maxDuration = 120;
+
 export async function POST(request: Request) {
   const body = await request.text();
   const secret = process.env.HIGGSFIELD_WEBHOOK_SECRET;

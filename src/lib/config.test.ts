@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { appOrigin, higgsfieldWebhookUrl } from "./config";
+import { appOrigin, higgsfieldWebhookUrl, s3MediaConfig } from "./config";
 
 const keys = [
   "APP_URL",
@@ -7,6 +7,10 @@ const keys = [
   "VERCEL_PROJECT_PRODUCTION_URL",
   "VERCEL_URL",
   "HIGGSFIELD_WEBHOOK_URL",
+  "S3_BUCKET",
+  "S3_PUBLIC_BASE_URL",
+  "AWS_REGION",
+  "AWS_DEFAULT_REGION",
 ] as const;
 
 const original = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
@@ -38,5 +42,18 @@ describe("deploy config", () => {
     delete process.env.VERCEL_URL;
     delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
     expect(higgsfieldWebhookUrl()).toBeUndefined();
+  });
+
+  it("reads optional S3 media config", () => {
+    delete process.env.S3_BUCKET;
+    expect(s3MediaConfig()).toBeUndefined();
+    process.env.S3_BUCKET = " rivera-assets ";
+    process.env.AWS_REGION = "us-west-2";
+    process.env.S3_PUBLIC_BASE_URL = "https://cdn.example/";
+    expect(s3MediaConfig()).toEqual({
+      bucket: "rivera-assets",
+      region: "us-west-2",
+      publicBaseUrl: "https://cdn.example",
+    });
   });
 });

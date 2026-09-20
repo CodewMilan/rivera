@@ -20,3 +20,20 @@ export function higgsfieldWebhookUrl(): string | undefined {
 export function isDeployedProduction(): boolean {
   return process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
 }
+
+export type S3MediaConfig = {
+  bucket: string;
+  region: string;
+  publicBaseUrl?: string;
+};
+
+export function s3MediaConfig(): S3MediaConfig | undefined {
+  const bucket = process.env.S3_BUCKET?.trim();
+  if (!bucket) return undefined;
+  const publicBaseUrl = process.env.S3_PUBLIC_BASE_URL?.trim().replace(/\/$/, "") || undefined;
+  return {
+    bucket,
+    region: (process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1").trim(),
+    publicBaseUrl,
+  };
+}
