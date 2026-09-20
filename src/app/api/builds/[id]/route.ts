@@ -29,15 +29,14 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       completedAt: mapped === "completed" || mapped === "failed" || mapped === "cancelled" ? new Date().toISOString() : build.completedAt,
     };
     const updated = await store.updateBuildRun(build.id, patch);
-    if (mapped === "completed" && build.status !== "completed") {
+    if (mapped === "completed") {
       await appendEvent(store, {
         organizationId: build.organizationId,
         type: "build.completed",
         summary: nextPr ? `Cursor opened a PR: ${nextPr}` : "Cursor build completed",
         payload: { buildId: build.id, prUrl: nextPr },
       });
-    }
-    if (mapped === "failed" && build.status !== "failed") {
+    } else if (mapped === "failed") {
       await appendEvent(store, {
         organizationId: build.organizationId,
         type: "build.failed",
