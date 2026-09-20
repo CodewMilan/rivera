@@ -34,7 +34,7 @@ function Overview() {
         <li>Evidence-backed research and a competitor scan</li>
         <li>A product recommendation with confidence</li>
         <li>A technical MVP plan that fits the budget and deadline</li>
-        <li>Hiring shortlist roles inferred from your brief</li>
+        <li>An optional hiring shortlist, if you pick roles on the org later</li>
         <li>Launch posts for X, LinkedIn, Instagram, and TikTok</li>
         <li>A final report and a human approval request before publish</li>
       </Bullet>
@@ -82,9 +82,8 @@ pnpm dev`}</CodeBlock>
       <h2>First run</h2>
       <Steps>
         <li>Sign in or create an account.</li>
-        <li>Describe the product you want to launch. Enter saves that as the brief.</li>
-        <li>Confirm or change the inferred hiring roles, then start.</li>
-        <li>Watch Overview, Agents, Tasks, and Timeline as the org works.</li>
+        <li>Describe the product you want to launch and start the org.</li>
+        <li>Watch Overview, Agents, Tasks, and Timeline as the org works. Hiring roles can wait until later.</li>
       </Steps>
       <Callout title="Demo goal">
         Build a developer tool that helps Stellar developers debug Soroban transactions in 30 days with a $500 budget.
@@ -206,7 +205,7 @@ function Dashboard() {
       <DocTable
         headers={["Tab", "What it shows"]}
         rows={[
-          ["Overview", "Goal, phase, budget used, blocked work, pending approvals, inbox"],
+          ["Overview", "Goal, phase, budget used, blocked work, pending approvals, inbox, optional hiring shortlist"],
           ["Agents", "Role, status, current task, confidence, last action"],
           ["Tasks", "Assignment, dependencies, cost, evaluation score"],
           ["Timeline", "Created, assigned, tool calls, debates, artifacts, approvals"],

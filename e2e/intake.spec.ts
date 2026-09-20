@@ -8,9 +8,8 @@ test("unsigned founder must sign in before a sandbox starts", async ({ page }) =
   await page.getByLabel(/Goal/i).fill(
     "Build a developer tool that helps Stellar developers debug Soroban transactions in 30 days with a $500 budget.",
   );
-  await page.getByRole("button", { name: /Continue/i }).click();
+  await page.getByRole("button", { name: /Sign in to start/i }).click();
 
-  await expect(page.getByText(/Saved as context/i)).toBeVisible();
   await expect(page.getByText(/Roles to shortlist/i)).toHaveCount(0);
 
   await Promise.race([

@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { StatusBadge, toneForStatus } from "@/components/status-badge";
+import { cn } from "@/lib/cn";
 import { money, phaseLabel, shortDate } from "@/lib/format";
+import { HIRING_ROLE_PRESETS, suggestHiringRoles } from "@/lib/intake/roles";
 import { evidenceFromEvents, toolMetricsFromEvents } from "@/lib/research/evidence";
 import type { Asset, OrganizationSnapshot } from "@/types";
 
@@ -243,6 +245,15 @@ export function OrgDashboard({
           onSync={() => void act(`/api/organizations/${organizationId}/gmail/sync`, "gmail-sync")}
           onDemo={() => void act(`/api/organizations/${organizationId}/gmail/demo`, "gmail-demo")}
           onDisconnect={() => void act(`/api/organizations/${organizationId}/gmail/disconnect`, "gmail-disconnect")}
+        />
+        <HiringShortlistPanel
+          organizationId={organizationId}
+          goal={organization.goal}
+          roles={organization.hiringRoles}
+          busy={busy}
+          onBusy={setBusy}
+          onError={setError}
+          onSaved={load}
         />
         <Panel title="Research evidence">
           {evidence.length === 0 && toolMetrics.length === 0 ? (
@@ -518,6 +529,118 @@ function Panel({ title, children, action }: { title: string; children: import("r
       </div>
       <div className="mt-4">{children}</div>
     </section>
+  );
+}
+
+function HiringShortlistPanel({
+  organizationId,
+  goal,
+  roles,
+  busy,
+  onBusy,
+  onError,
+  onSaved,
+}: {
+  organizationId: string;
+  goal: string;
+  roles: string[];
+  busy: string | null;
+  onBusy: (value: string | null) => void;
+  onError: (value: string | null) => void;
+  onSaved: () => void | Promise<void>;
+}) {
+  const [open, setOpen] = useState(roles.length > 0);
+  const [selected, setSelected] = useState<string[]>(roles);
+
+  useEffect(() => {
+    setSelected(roles);
+    if (roles.length > 0) setOpen(true);
+  }, [roles]);
+
+  function toggle(role: string) {
+    setSelected((current) =>
+      current.includes(role) ? current.filter((item) => item !== role) : [...current, role],
+    );
+  }
+
+  async function save() {
+    onBusy("hiring-roles");
+    onError(null);
+    const response = await fetch(`/api/organizations/${organizationId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hiringRoles: selected }),
+    });
+    const data = await response.json().catch(() => ({}));
+    await onSaved();
+    if (!response.ok) {
+      onError(typeof data.error === "string" ? data.error : "Could not save hiring roles");
+    }
+    onBusy(null);
+  }
+
+  return (
+    <Panel
+      title="Hiring shortlist"
+      action={
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          className="min-h-11 rounded-[5px] border border-[#c2b8ff] px-3 text-xs text-[#c2b8ff] focus-visible:ring-2 focus-visible:ring-[#c2b8ff]"
+        >
+          {open ? "Hide" : roles.length ? "Edit" : "Set roles"}
+        </button>
+      }
+    >
+      {roles.length === 0 && !open ? (
+        <Empty label="Optional. Pick roles later if you want Rivera to source candidates." />
+      ) : null}
+      {open ? (
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Rivera leaves this off until you choose. Suggested from the brief if you want a starting point.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {HIRING_ROLE_PRESETS.map((role) => {
+              const active = selected.includes(role);
+              return (
+                <button
+                  key={role}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => toggle(role)}
+                  className={cn(
+                    "min-h-11 rounded-full border px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff]",
+                    active
+                      ? "border-[#c2b8ff] bg-[rgba(194,184,255,0.15)] text-[#f4f2f0]"
+                      : "border-white/15 text-[#c2b8ff] hover:border-[#c2b8ff]",
+                  )}
+                >
+                  {role}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setSelected(suggestHiringRoles(goal))}
+              className="min-h-11 rounded-[5px] border border-white/15 px-3 text-xs text-[#928c97] focus-visible:ring-2 focus-visible:ring-[#c2b8ff]"
+            >
+              Suggest from brief
+            </button>
+            <button
+              type="button"
+              disabled={busy === "hiring-roles"}
+              onClick={() => void save()}
+              className="min-h-11 rounded-[5px] bg-white px-3 text-xs text-[#221d2a] focus-visible:ring-2 focus-visible:ring-[#c2b8ff] disabled:opacity-60"
+            >
+              {busy === "hiring-roles" ? "Saving…" : "Save roles"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </Panel>
   );
 }
 

@@ -7,7 +7,7 @@ vi.mock("@clerk/nextjs/server", () => ({
 import { auth } from "@clerk/nextjs/server";
 import { resetStore } from "@/lib/store";
 import { GET, POST } from "./route";
-import { GET as getOrg } from "./[id]/route";
+import { GET as getOrg, PATCH as patchOrg } from "./[id]/route";
 
 const validBody = {
   goal: "Build a developer tool that helps Stellar developers debug Soroban transactions",
@@ -57,6 +57,7 @@ describe("phase 1 organization API", () => {
     expect(again.organization.id).toBe(payload.organization.id);
     expect(again.phase).toBe("intake");
     expect(again.events.some((event: { type: string }) => event.type === "organization.created")).toBe(true);
+    expect(payload.organization.hiringRoles).toEqual([]);
 
     const list = await GET();
     const listed = await list.json();
@@ -76,5 +77,27 @@ describe("phase 1 organization API", () => {
       }),
     );
     expect(response.status).toBe(400);
+  });
+
+  it("lets the owner set hiring roles later", async () => {
+    const created = await POST(
+      new Request("http://rivera.test/api/organizations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validBody),
+      }),
+    );
+    const payload = await created.json();
+    const patched = await patchOrg(
+      new Request("http://rivera.test", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hiringRoles: ["Founding Engineer", "Product Designer"] }),
+      }),
+      { params: Promise.resolve({ id: payload.organization.id }) },
+    );
+    expect(patched.status).toBe(200);
+    const body = await patched.json();
+    expect(body.organization.hiringRoles).toEqual(["Founding Engineer", "Product Designer"]);
   });
 });

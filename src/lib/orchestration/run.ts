@@ -221,7 +221,7 @@ async function searchCompetitorSources(deps: OrchestratorDeps, org: Organization
 }
 
 async function searchHiringSources(deps: OrchestratorDeps, org: Organization, run: Run) {
-  const roles = org.hiringRoles?.length ? org.hiringRoles : ["Founding Engineer"];
+  const roles = org.hiringRoles;
   const domainHint = org.technology || org.domain || org.goal;
   const findings: unknown[] = [];
   for (const role of roles) {
@@ -802,12 +802,15 @@ export async function runOrganization(runId: string, deps: OrchestratorDeps): Pr
         org = result.org;
         run = result.run;
 
-        const hiringHits = await searchHiringSources(deps, org, run);
-        const hiringResult = await runTypedTasks(deps, org, run, ["hiring"], {
-          hiring: hiringHits,
-        });
-        org = hiringResult.org;
-        run = await transition(deps.store, hiringResult.run, "debate");
+        if (org.hiringRoles.length > 0) {
+          const hiringHits = await searchHiringSources(deps, org, run);
+          const hiringResult = await runTypedTasks(deps, org, run, ["hiring"], {
+            hiring: hiringHits,
+          });
+          org = hiringResult.org;
+          run = hiringResult.run;
+        }
+        run = await transition(deps.store, run, "debate");
         break;
       }
       case "debate":

@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { clearIntakeDraft, readIntakeDraft, saveIntakeDraft } from "@/lib/intake/draft";
-import { HIRING_ROLE_PRESETS, suggestHiringRoles } from "@/lib/intake/roles";
 
 const EXAMPLES = [
   "Build a developer tool that helps Stellar developers debug Soroban transactions in 30 days with a $500 budget.",
@@ -21,20 +20,12 @@ function defaultDeadline() {
   return date.toISOString().slice(0, 10);
 }
 
-function prefersReducedMotion() {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
 export function IntakeForm() {
   const router = useRouter();
   const { isLoaded, isSignedIn } = useUser();
   const areaRef = useRef<HTMLTextAreaElement>(null);
-  const rolesRef = useRef<HTMLFieldSetElement>(null);
   const signInRef = useRef<HTMLButtonElement>(null);
   const [goal, setGoal] = useState("");
-  const [brief, setBrief] = useState<string | null>(null);
-  const [roles, setRoles] = useState<string[]>([]);
-  const [showRoles, setShowRoles] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -49,40 +40,8 @@ export function IntakeForm() {
     const draft = readIntakeDraft();
     if (!draft) return;
     setGoal(draft.goal);
-    setBrief(draft.goal);
-    setRoles(suggestHiringRoles(draft.goal));
     requestAnimationFrame(resize);
   }, []);
-
-  useEffect(() => {
-    if (!isSignedIn || !brief) {
-      setShowRoles(false);
-      return;
-    }
-    const delay = prefersReducedMotion() ? 0 : 700;
-    const timer = window.setTimeout(() => setShowRoles(true), delay);
-    return () => window.clearTimeout(timer);
-  }, [isSignedIn, brief]);
-
-  useEffect(() => {
-    if (!showRoles) return;
-    rolesRef.current?.scrollIntoView({
-      behavior: prefersReducedMotion() ? "auto" : "smooth",
-      block: "nearest",
-    });
-  }, [showRoles]);
-
-  function toggleRole(role: string) {
-    setRoles((current) =>
-      current.includes(role) ? current.filter((item) => item !== role) : [...current, role],
-    );
-  }
-
-  function captureBrief(next: string) {
-    saveIntakeDraft(next);
-    setBrief(next);
-    setRoles(suggestHiringRoles(next));
-  }
 
   function requestSignIn() {
     signInRef.current?.click();
@@ -98,13 +57,13 @@ export function IntakeForm() {
         deadline: defaultDeadline(),
         budgetUsd: 500,
         preferredChannels: ["x", "linkedin", "instagram", "tiktok"],
-        hiringRoles: roles.length ? roles : suggestHiringRoles(nextGoal),
         autoPublish: false,
       }),
     });
     const created = await create.json();
     if (create.status === 401) {
       setPending(false);
+      saveIntakeDraft(nextGoal);
       requestSignIn();
       return;
     }
@@ -129,31 +88,18 @@ export function IntakeForm() {
       return;
     }
 
-    if (!brief) {
-      captureBrief(next);
-      if (isLoaded && !isSignedIn) requestSignIn();
-      return;
-    }
-
     if (!isLoaded) return;
     if (!isSignedIn) {
+      saveIntakeDraft(next);
       requestSignIn();
       return;
     }
-    if (!showRoles) return;
 
     await startOrganization(next);
   }
 
-  const waitingOnRoles = Boolean(brief && isSignedIn && !showRoles);
-  const needsSignIn = Boolean(brief && isLoaded && !isSignedIn);
-  const submitLabel = pending
-    ? "Starting Rivera"
-    : waitingOnRoles
-      ? "Reading your brief"
-      : showRoles
-        ? "Start Rivera"
-        : "Continue";
+  const needsSignIn = Boolean(isLoaded && !isSignedIn && goal.trim().length >= 10);
+  const submitLabel = pending ? "Starting Rivera" : needsSignIn ? "Sign in to start" : "Start Rivera";
 
   return (
     <form onSubmit={onSubmit} className="mx-auto w-full max-w-[720px]" aria-busy={pending}>
@@ -199,15 +145,11 @@ export function IntakeForm() {
           <p id="goal-hint" className="text-xs text-[#928c97]">
             {needsSignIn
               ? "Sign in to start your sandbox"
-              : waitingOnRoles
-                ? "Using this as launch context…"
-                : showRoles
-                  ? "Enter to start · Shift + Enter for a new line"
-                  : "Enter to continue · Shift + Enter for a new line"}
+              : "Enter to start · Shift + Enter for a new line"}
           </p>
           <button
             type="submit"
-            disabled={pending || waitingOnRoles || goal.trim().length < 10}
+            disabled={pending || goal.trim().length < 10}
             aria-label={submitLabel}
             className="grid size-11 shrink-0 place-items-center rounded-full bg-white text-[#221d2a] transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff] disabled:opacity-40"
           >
@@ -216,70 +158,31 @@ export function IntakeForm() {
         </div>
       </div>
 
-      {brief ? (
-        <p className="mt-3 text-sm leading-6 text-[#928c97]">
-          Saved as context. Rivera will use this brief for research, hiring, and the rest of the run.
-        </p>
-      ) : null}
-
       {error ? (
         <p id="goal-error" className="mt-3 text-sm text-destructive" role="alert">
           {error}
         </p>
       ) : null}
 
-      {showRoles ? (
-        <fieldset
-          ref={rolesRef}
-          className="mt-6 rounded-[12px] border border-white/10 bg-[#1a1720] p-4"
-        >
-          <legend className="px-1 text-xs uppercase tracking-wide text-[#928c97]">Roles to shortlist</legend>
-          <p className="text-xs text-[#928c97]">Inferred from your prompt. Change them before you start.</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {HIRING_ROLE_PRESETS.map((role) => {
-              const selected = roles.includes(role);
-              return (
-                <button
-                  key={role}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => toggleRole(role)}
-                  className={cn(
-                    "min-h-11 rounded-full border px-4 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff]",
-                    selected
-                      ? "border-[#c2b8ff] bg-[rgba(194,184,255,0.15)] text-[#f4f2f0]"
-                      : "border-white/15 text-[#c2b8ff] hover:border-[#c2b8ff]",
-                  )}
-                >
-                  {role}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-      ) : null}
-
-      {!brief ? (
-        <ul className="mt-5 flex flex-wrap justify-center gap-2">
-          {EXAMPLES.map((example) => (
-            <li key={example}>
-              <button
-                type="button"
-                onClick={() => {
-                  setGoal(example);
-                  requestAnimationFrame(() => {
-                    resize();
-                    areaRef.current?.focus();
-                  });
-                }}
-                className="min-h-11 max-w-[340px] truncate rounded-full border border-white/15 px-4 text-left text-sm text-[#c2b8ff] transition-colors hover:border-[#c2b8ff] hover:bg-[rgba(194,184,255,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff]"
-              >
-                {example}
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <ul className="mt-5 flex flex-wrap justify-center gap-2">
+        {EXAMPLES.map((example) => (
+          <li key={example}>
+            <button
+              type="button"
+              onClick={() => {
+                setGoal(example);
+                requestAnimationFrame(() => {
+                  resize();
+                  areaRef.current?.focus();
+                });
+              }}
+              className="min-h-11 max-w-[340px] truncate rounded-full border border-white/15 px-4 text-left text-sm text-[#c2b8ff] transition-colors hover:border-[#c2b8ff] hover:bg-[rgba(194,184,255,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff]"
+            >
+              {example}
+            </button>
+          </li>
+        ))}
+      </ul>
     </form>
   );
 }
