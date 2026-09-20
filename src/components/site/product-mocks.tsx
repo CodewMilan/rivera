@@ -16,7 +16,7 @@ export function HeroDashboard() {
           orgName: "Loading organization",
           initial: "R",
           orgHref: "#intake",
-          metrics: { tasksThisWeek: "—", successRate: "—", avgRunTime: "—" },
+          metrics: { tasksThisWeek: "-", successRate: "-", avgRunTime: "-" },
           agents: [],
           runs: [],
           agentNames: [],
@@ -66,7 +66,7 @@ function LiveHeroDashboard() {
           orgName: "Loading organization",
           initial: initial.toUpperCase(),
           orgHref: "#intake",
-          metrics: { tasksThisWeek: "—", successRate: "—", avgRunTime: "—" },
+          metrics: { tasksThisWeek: "-", successRate: "-", avgRunTime: "-" },
           agents: [],
           runs: [],
           agentNames: [],
@@ -97,8 +97,8 @@ function viewFromOverview(overview: HomeOverview, initial: string): DashboardVie
       orgHref: "#intake",
       metrics: {
         tasksThisWeek: "0",
-        successRate: "—",
-        avgRunTime: "—",
+        successRate: "-",
+        avgRunTime: "-",
       },
       agents: [],
       runs: [],
@@ -284,7 +284,7 @@ function DashboardCard({
           <p className="mt-2 text-[13px] text-[#f4f2f0]">{view.orgName}</p>
           <p className="mt-6 text-[11px] tracking-[0.14em] text-[#928c97]">AGENTS</p>
           {view.agentNames.length === 0 ? (
-            <p className="mt-2 text-[13px] text-[#928c97]">—</p>
+            <p className="mt-2 text-[13px] text-[#928c97]">-</p>
           ) : (
             view.agentNames.map((name) => (
               <p key={name} className="mt-1 text-[13px] text-[#f4f2f0] first:mt-2">

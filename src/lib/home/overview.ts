@@ -61,7 +61,7 @@ export function relativeTime(iso?: string, now = Date.now()): string {
 }
 
 export function formatDuration(ms: number): string {
-  if (ms <= 0) return "—";
+  if (ms <= 0) return "-";
   const totalSeconds = Math.round(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -96,7 +96,7 @@ function tasksThisWeek(tasks: Task[], now: number): Task[] {
 
 function successRate(tasks: Task[]): string {
   const finished = tasks.filter((task) => task.status === "done" || task.status === "failed");
-  if (finished.length === 0) return "—";
+  if (finished.length === 0) return "-";
   const done = finished.filter((task) => task.status === "done").length;
   return `${Math.round((done / finished.length) * 100)}%`;
 }
@@ -105,7 +105,7 @@ function averageRunTime(runs: Run[]): string {
   const durations = runs
     .map((run) => Date.parse(run.updatedAt) - Date.parse(run.startedAt))
     .filter((ms) => Number.isFinite(ms) && ms > 0);
-  if (durations.length === 0) return "—";
+  if (durations.length === 0) return "-";
   return formatDuration(durations.reduce((sum, ms) => sum + ms, 0) / durations.length);
 }
 

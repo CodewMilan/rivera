@@ -334,7 +334,7 @@ export function OrgDashboard({
                       <StatusBadge value={task.status} tone={toneForStatus(task.status)} />
                     </td>
                     <td className="px-4 py-3 font-mono tabular-nums">{money(task.actualCostCents ?? 0)}</td>
-                    <td className="px-4 py-3 font-mono tabular-nums">{task.evaluation?.score ?? "—"}</td>
+                    <td className="px-4 py-3 font-mono tabular-nums">{task.evaluation?.score ?? "-"}</td>
                   </tr>
                 ))}
               </tbody>

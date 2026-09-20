@@ -7,7 +7,6 @@ const PLANS = [
   {
     name: "Sandbox",
     price: "$0",
-    cadence: "to try the org",
     lead: "See the whole company on one idea.",
     body: "One organization. One live run, or unlimited demo data. Every agent role is there. Publish stays off.",
     items: [
@@ -58,7 +57,7 @@ const METERED = [
 const QUESTIONS = [
   {
     title: "Is model spend included?",
-    body: "Studio is the platform. Research, models, and media spend against the budget on the organization — never past the number you set.",
+    body: "Studio is the platform. Research, models, and media spend against the budget on the organization, never past the number you set.",
   },
   {
     title: "What is a sandbox?",
@@ -102,7 +101,7 @@ function Hero() {
         <span className="block text-[#f4f2f0]">Pay when the launch is real.</span>
       </h1>
       <p className="mt-[20px] max-w-[640px] text-[19px] leading-[29.4px] tracking-[0.21px] text-[#928c97]">
-        The platform is simple. Model, research, and media spend against the budget you set — and
+        The platform is simple. Model, research, and media spend against the budget you set, and
         never past it.
       </p>
     </section>
@@ -160,7 +159,7 @@ function PlanCard({
 }: {
   name: string;
   price: string;
-  cadence: string;
+  cadence?: string;
   lead: string;
   body: string;
   items: readonly string[];
@@ -180,7 +179,9 @@ function PlanCard({
         <p className="text-[49px] font-normal leading-[60px] tracking-[-1.62px] text-[#f4f2f0]">
           {price}
         </p>
-        <p className="text-[16px] leading-[27px] tracking-[0.18px] text-[#928c97]">{cadence}</p>
+        {cadence ? (
+          <p className="text-[16px] leading-[27px] tracking-[0.18px] text-[#928c97]">{cadence}</p>
+        ) : null}
       </div>
       <h2 className="mt-6 text-[29px] font-normal leading-[36px] text-[#f4f2f0]">
         {lead} <span className="text-[rgba(146,140,151,0.9)]">{body}</span>
@@ -222,7 +223,7 @@ function Metered() {
           pass it, Rivera stops and asks. Founder time comes back. Surprise spend does not.
         </p>
       </div>
-      <div className="mt-[52px] grid gap-x-[65.5px] gap-y-8 md:grid-cols-3">
+      <div className="mt-[52px] grid gap-x-[65.5px] gap-y-8 md:grid-cols-2 lg:grid-cols-3">
         {METERED.map((item) => (
           <div key={item.title} className="max-w-[371.16px] pb-[32px]">
             <div className="inline-flex overflow-hidden rounded-[4px] bg-[#1f1c26]">

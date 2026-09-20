@@ -1,23 +1,19 @@
 "use client";
 
+import { SignInButton, useUser } from "@clerk/nextjs";
 import { ArrowUp } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
+import { clearIntakeDraft, readIntakeDraft, saveIntakeDraft } from "@/lib/intake/draft";
+import { HIRING_ROLE_PRESETS, suggestHiringRoles } from "@/lib/intake/roles";
 
 const EXAMPLES = [
   "Build a developer tool that helps Stellar developers debug Soroban transactions in 30 days with a $500 budget.",
   "Launch a local-first CLI for decoding failed smart-contract simulations.",
 ];
 
-const ROLE_PRESETS = [
-  "Founding Engineer",
-  "AI Engineer",
-  "Systems Architect",
-  "Full-stack Engineer",
-  "Product Designer",
-  "Developer Advocate",
-];
+const AFTER_SIGN_IN = "/#intake";
 
 function defaultDeadline() {
   const date = new Date();
@@ -25,11 +21,20 @@ function defaultDeadline() {
   return date.toISOString().slice(0, 10);
 }
 
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 export function IntakeForm() {
   const router = useRouter();
+  const { isLoaded, isSignedIn } = useUser();
   const areaRef = useRef<HTMLTextAreaElement>(null);
+  const rolesRef = useRef<HTMLFieldSetElement>(null);
+  const signInRef = useRef<HTMLButtonElement>(null);
   const [goal, setGoal] = useState("");
-  const [roles, setRoles] = useState<string[]>(["Founding Engineer", "AI Engineer"]);
+  const [brief, setBrief] = useState<string | null>(null);
+  const [roles, setRoles] = useState<string[]>([]);
+  const [showRoles, setShowRoles] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -40,42 +45,124 @@ export function IntakeForm() {
     area.style.height = `${Math.min(Math.max(area.scrollHeight, 88), 220)}px`;
   }
 
+  useEffect(() => {
+    const draft = readIntakeDraft();
+    if (!draft) return;
+    setGoal(draft.goal);
+    setBrief(draft.goal);
+    setRoles(suggestHiringRoles(draft.goal));
+    requestAnimationFrame(resize);
+  }, []);
+
+  useEffect(() => {
+    if (!isSignedIn || !brief) {
+      setShowRoles(false);
+      return;
+    }
+    const delay = prefersReducedMotion() ? 0 : 700;
+    const timer = window.setTimeout(() => setShowRoles(true), delay);
+    return () => window.clearTimeout(timer);
+  }, [isSignedIn, brief]);
+
+  useEffect(() => {
+    if (!showRoles) return;
+    rolesRef.current?.scrollIntoView({
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+      block: "nearest",
+    });
+  }, [showRoles]);
+
   function toggleRole(role: string) {
     setRoles((current) =>
       current.includes(role) ? current.filter((item) => item !== role) : [...current, role],
     );
   }
 
-  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPending(true);
-    setError(null);
+  function captureBrief(next: string) {
+    saveIntakeDraft(next);
+    setBrief(next);
+    setRoles(suggestHiringRoles(next));
+  }
 
+  function requestSignIn() {
+    signInRef.current?.click();
+  }
+
+  async function startOrganization(nextGoal: string) {
+    setPending(true);
     const create = await fetch("/api/organizations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        goal,
+        goal: nextGoal,
         deadline: defaultDeadline(),
         budgetUsd: 500,
         preferredChannels: ["x", "linkedin", "instagram", "tiktok"],
-        hiringRoles: roles,
+        hiringRoles: roles.length ? roles : suggestHiringRoles(nextGoal),
         autoPublish: false,
       }),
     });
     const created = await create.json();
+    if (create.status === 401) {
+      setPending(false);
+      requestSignIn();
+      return;
+    }
     if (!create.ok) {
       setPending(false);
       setError(created.error ?? "Could not start the organization");
       areaRef.current?.focus();
       return;
     }
-
+    clearIntakeDraft();
     router.push(`/organizations/${created.organization.id}`);
   }
 
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+
+    const next = goal.trim();
+    if (next.length < 10) {
+      setError("Goal must be at least 10 characters");
+      areaRef.current?.focus();
+      return;
+    }
+
+    if (!brief) {
+      captureBrief(next);
+      if (isLoaded && !isSignedIn) requestSignIn();
+      return;
+    }
+
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      requestSignIn();
+      return;
+    }
+    if (!showRoles) return;
+
+    await startOrganization(next);
+  }
+
+  const waitingOnRoles = Boolean(brief && isSignedIn && !showRoles);
+  const needsSignIn = Boolean(brief && isLoaded && !isSignedIn);
+  const submitLabel = pending
+    ? "Starting Rivera"
+    : waitingOnRoles
+      ? "Reading your brief"
+      : showRoles
+        ? "Start Rivera"
+        : "Continue";
+
   return (
-    <form onSubmit={onSubmit} className="mx-auto w-full max-w-[720px]">
+    <form onSubmit={onSubmit} className="mx-auto w-full max-w-[720px]" aria-busy={pending}>
+      <SignInButton mode="modal" forceRedirectUrl={AFTER_SIGN_IN} fallbackRedirectUrl={AFTER_SIGN_IN}>
+        <button ref={signInRef} type="button" className="sr-only" tabIndex={-1} aria-hidden="true">
+          Sign in to start a sandbox
+        </button>
+      </SignInButton>
+
       <label htmlFor="goal" className="sr-only">
         Goal
       </label>
@@ -110,12 +197,18 @@ export function IntakeForm() {
         />
         <div className="mt-2 flex items-end justify-between gap-3 px-1 pb-1">
           <p id="goal-hint" className="text-xs text-[#928c97]">
-            Enter to start · Shift + Enter for a new line
+            {needsSignIn
+              ? "Sign in to start your sandbox"
+              : waitingOnRoles
+                ? "Using this as launch context…"
+                : showRoles
+                  ? "Enter to start · Shift + Enter for a new line"
+                  : "Enter to continue · Shift + Enter for a new line"}
           </p>
           <button
             type="submit"
-            disabled={pending || goal.trim().length < 10}
-            aria-label={pending ? "Starting Rivera" : "Start Rivera"}
+            disabled={pending || waitingOnRoles || goal.trim().length < 10}
+            aria-label={submitLabel}
             className="grid size-11 shrink-0 place-items-center rounded-full bg-white text-[#221d2a] transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff] disabled:opacity-40"
           >
             <ArrowUp className="size-5" aria-hidden="true" />
@@ -123,61 +216,70 @@ export function IntakeForm() {
         </div>
       </div>
 
+      {brief ? (
+        <p className="mt-3 text-sm leading-6 text-[#928c97]">
+          Saved as context. Rivera will use this brief for research, hiring, and the rest of the run.
+        </p>
+      ) : null}
+
       {error ? (
         <p id="goal-error" className="mt-3 text-sm text-destructive" role="alert">
           {error}
         </p>
       ) : null}
 
-      <fieldset className="mt-6 rounded-[12px] border border-white/10 bg-[#1a1720] p-4">
-        <legend className="px-1 text-xs uppercase tracking-wide text-[#928c97]">
-          Roles to shortlist
-        </legend>
-        <p className="text-xs text-[#928c97]">
-          Rivera scans public LinkedIn profiles for each role selected.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {ROLE_PRESETS.map((role) => {
-            const selected = roles.includes(role);
-            return (
-              <button
-                key={role}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => toggleRole(role)}
-                className={cn(
-                  "min-h-11 rounded-full border px-4 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff]",
-                  selected
-                    ? "border-[#c2b8ff] bg-[rgba(194,184,255,0.15)] text-[#f4f2f0]"
-                    : "border-white/15 text-[#c2b8ff] hover:border-[#c2b8ff]",
-                )}
-              >
-                {role}
-              </button>
-            );
-          })}
-        </div>
-      </fieldset>
+      {showRoles ? (
+        <fieldset
+          ref={rolesRef}
+          className="mt-6 rounded-[12px] border border-white/10 bg-[#1a1720] p-4"
+        >
+          <legend className="px-1 text-xs uppercase tracking-wide text-[#928c97]">Roles to shortlist</legend>
+          <p className="text-xs text-[#928c97]">Inferred from your prompt. Change them before you start.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {HIRING_ROLE_PRESETS.map((role) => {
+              const selected = roles.includes(role);
+              return (
+                <button
+                  key={role}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => toggleRole(role)}
+                  className={cn(
+                    "min-h-11 rounded-full border px-4 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff]",
+                    selected
+                      ? "border-[#c2b8ff] bg-[rgba(194,184,255,0.15)] text-[#f4f2f0]"
+                      : "border-white/15 text-[#c2b8ff] hover:border-[#c2b8ff]",
+                  )}
+                >
+                  {role}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+      ) : null}
 
-      <ul className="mt-5 flex flex-wrap justify-center gap-2">
-        {EXAMPLES.map((example) => (
-          <li key={example}>
-            <button
-              type="button"
-              onClick={() => {
-                setGoal(example);
-                requestAnimationFrame(() => {
-                  resize();
-                  areaRef.current?.focus();
-                });
-              }}
-              className="min-h-11 max-w-[340px] truncate rounded-full border border-white/15 px-4 text-left text-sm text-[#c2b8ff] transition-colors hover:border-[#c2b8ff] hover:bg-[rgba(194,184,255,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff]"
-            >
-              {example}
-            </button>
-          </li>
-        ))}
-      </ul>
+      {!brief ? (
+        <ul className="mt-5 flex flex-wrap justify-center gap-2">
+          {EXAMPLES.map((example) => (
+            <li key={example}>
+              <button
+                type="button"
+                onClick={() => {
+                  setGoal(example);
+                  requestAnimationFrame(() => {
+                    resize();
+                    areaRef.current?.focus();
+                  });
+                }}
+                className="min-h-11 max-w-[340px] truncate rounded-full border border-white/15 px-4 text-left text-sm text-[#c2b8ff] transition-colors hover:border-[#c2b8ff] hover:bg-[rgba(194,184,255,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff]"
+              >
+                {example}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </form>
   );
 }

@@ -4,7 +4,7 @@ import { NavOutlineLink } from "@/components/site/buttons";
 export function AuthNavLink() {
   return (
     <Show when="signed-out">
-      <SignInButton>
+      <SignInButton mode="modal" forceRedirectUrl="/#intake" fallbackRedirectUrl="/#intake">
         <button type="button" className="px-[15px] text-[15px] leading-[24px] text-[#f4f2f0]">
           Login
         </button>

@@ -46,7 +46,7 @@ function AlertBanner() {
           Post
         </span>
         <span className="text-[15px] leading-[24px] text-[#0c0a10]">
-          Chat with the Rivera launch index — research, planning, and approvals.{" "}
+          Chat with the Rivera launch index for research, planning, and approvals.{" "}
           <span className="text-[#6a53fe]">Learn more</span>
         </span>
       </a>

@@ -1,4 +1,4 @@
-# Brand — Rivera
+# Brand: Rivera
 
 _Status: deferred_
 

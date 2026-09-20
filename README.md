@@ -2,7 +2,7 @@
 
 An AI product-launch organization for technical founders.
 
-**Current phase: 3 — Tools, media, and evaluation.** After a run starts, Rivera searches public sources, scores specialist output, generates Higgsfield previews, and waits for human review before anything publishes.
+**Current phase: 3. Tools, media, and evaluation.** After a run starts, Rivera searches public sources, scores specialist output, generates Higgsfield previews, and waits for human review before anything publishes.
 
 ## Quick start
 
@@ -33,7 +33,7 @@ Vercel + a hosted Postgres (Neon, Supabase, or Vercel Postgres) is the default p
 2. Create a Postgres database and copy the **pooled** connection string into `DATABASE_URL`. Use `sslmode=require` (Neon/Supabase already do).
 3. Import the project in Vercel, set the env vars from `.env.example`, and deploy. `pnpm build` is the build command; `RIVERA_STORE=postgres` should stay set.
 4. After the first deploy, set `APP_URL` (and optionally `HIGGSFIELD_WEBHOOK_URL`) to the production origin so Higgsfield callbacks reach `/api/webhooks/higgsfield`.
-5. Hit `/api/health` — it should report `store: postgres` and `database: ok`.
+5. Hit `/api/health`. It should report `store: postgres` and `database: ok`.
 
 Long Rivera runs need a **Vercel Pro** function limit (route `maxDuration` is 300s). Hobby plans will cut live LLM runs short; POST `/api/organizations/:id/runs` again to resume a non-terminal run.
 

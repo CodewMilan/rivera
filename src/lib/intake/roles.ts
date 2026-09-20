@@ -15,7 +15,7 @@ export function suggestHiringRoles(goal: string): string[] {
     if (!picked.includes(role)) picked.push(role);
   }
 
-  if (/\b(ai|llm|agent|model|machine learning|\bml\b)\b/.test(text)) add("AI Engineer");
+  if (/\b(ai|llm|agent|models?|machine learning|ml)\b/.test(text)) add("AI Engineer");
   if (/\b(design|designer|ux|ui|figma)\b/.test(text)) add("Product Designer");
   if (/\b(architect|systems|infrastructure|infra|protocol)\b/.test(text)) add("Systems Architect");
   if (/\b(full[- ]?stack|next\.js|react|frontend|backend|typescript)\b/.test(text)) add("Full-stack Engineer");

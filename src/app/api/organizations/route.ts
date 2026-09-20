@@ -14,6 +14,9 @@ async function currentUserId(): Promise<string | undefined> {
 }
 
 export async function POST(request: Request) {
+  const userId = await currentUserId();
+  if (!userId) return errorJson("Sign in to start a Rivera org", 401);
+
   const parsed = parseIntake(await readJson(request));
   if (!parsed.success) {
     return errorJson(parsed.error.issues[0]?.message ?? "Invalid intake", 400, {
@@ -22,16 +25,17 @@ export async function POST(request: Request) {
   }
   const store = await getStore();
   const organization = await createOrganizationFromIntake(store, parsed.data, {
-    ownerUserId: await currentUserId(),
+    ownerUserId: userId,
   });
   return json({ organization }, 201);
 }
 
 export async function GET() {
+  const userId = await currentUserId();
+  if (!userId) return json({ organizations: [] });
+
   const store = await getStore();
   const organizations = await store.listOrganizations();
-  const userId = await currentUserId();
-  if (!userId) return json({ organizations });
   const mine = organizations.filter((org) => org.ownerUserId === userId);
-  return json({ organizations: mine.length ? mine : organizations });
+  return json({ organizations: mine });
 }

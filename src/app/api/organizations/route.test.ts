@@ -1,4 +1,10 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@clerk/nextjs/server", () => ({
+  auth: vi.fn(async () => ({ userId: "user_test" })),
+}));
+
+import { auth } from "@clerk/nextjs/server";
 import { resetStore } from "@/lib/store";
 import { GET, POST } from "./route";
 import { GET as getOrg } from "./[id]/route";
@@ -14,6 +20,19 @@ const validBody = {
 describe("phase 1 organization API", () => {
   beforeEach(() => {
     resetStore();
+    vi.mocked(auth).mockResolvedValue({ userId: "user_test" } as never);
+  });
+
+  it("requires sign-in before creating an organization", async () => {
+    vi.mocked(auth).mockResolvedValueOnce({ userId: null } as never);
+    const created = await POST(
+      new Request("http://rivera.test/api/organizations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validBody),
+      }),
+    );
+    expect(created.status).toBe(401);
   });
 
   it("persists an organization and writes a created event", async () => {
@@ -28,6 +47,7 @@ describe("phase 1 organization API", () => {
     const payload = await created.json();
     expect(payload.organization.goal).toContain("Soroban");
     expect(payload.organization.budgetCents).toBe(50000);
+    expect(payload.organization.ownerUserId).toBe("user_test");
 
     const read = await getOrg(new Request("http://rivera.test"), {
       params: Promise.resolve({ id: payload.organization.id }),

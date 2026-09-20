@@ -75,7 +75,7 @@ export const clerkLocalization = {
   signUp: {
     start: {
       title: "Create your account",
-      subtitle: "Research, planning, and production — in your own cloud.",
+      subtitle: "Research, planning, and production in your own cloud.",
     },
   },
 };

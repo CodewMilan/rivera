@@ -289,7 +289,7 @@ function ValueGrid() {
         <Value
           icon={figma.iconNoLockin}
           title="No Lock-in"
-          body="You can cut off Rivera's access at any time — your product and data remain yours."
+          body="You can cut off Rivera's access at any time. Your product and data remain yours."
         />
         <Value
           icon={figma.iconCost}
