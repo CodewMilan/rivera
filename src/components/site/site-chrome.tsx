@@ -14,16 +14,18 @@ function isAuthPath(pathname: string) {
 }
 
 export function SiteChrome({ children }: { children: ReactNode }) {
-  const auth = isAuthPath(usePathname());
+  const pathname = usePathname();
+  const auth = isAuthPath(pathname);
+  const app = pathname.startsWith("/organizations");
 
   return (
     <div className="relative min-h-screen bg-[#0c0a10] text-[#f4f2f0]">
-      {auth ? null : <AlertBanner />}
+      {auth || app ? null : <AlertBanner />}
       <div className="relative overflow-hidden">
-        <StarField />
+        {app ? null : <StarField />}
         <SiteHeader />
         {children}
-        {auth ? <AuthFooter /> : <SiteFooter />}
+        {auth || app ? <AuthFooter /> : <SiteFooter />}
       </div>
     </div>
   );

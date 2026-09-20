@@ -73,6 +73,28 @@ body {
   background: color-mix(in oklab, #c2b8ff 35%, transparent);
 }
 
+@keyframes rivera-live {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+
+.live-dot {
+  animation: rivera-live 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot {
+    animation: none;
+  }
+}
+
 input,
 textarea,
 select {

@@ -33,7 +33,7 @@ export const DOCS_NAV: DocsSection[] = [
     pages: [
       page("runs", "How a run works", "Phases, caps, resume, and what stops a run."),
       page("agents", "Agents", "The specialist org Rivera staffs for every goal."),
-      page("dashboard", "Dashboard", "Overview, tasks, timeline, decisions, content, and the final report."),
+      page("dashboard", "Dashboard", "Three views: Now, Work, and Launch."),
       page("approvals", "Approvals", "Human gates before publish, spend, and other irreversible actions."),
       page("content", "Content and publishing", "Campaign drafts, media jobs, review, schedule, and publish."),
       page("inbox", "Inbox", "Gmail connect, relevance scoring, and the sample inbox."),

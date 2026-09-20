@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
-import { OrgBuild } from "@/components/org-build";
-import { AppMain } from "@/components/site/site-chrome";
+import { OrgShell } from "@/components/org-shell";
 import { getStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -16,16 +15,5 @@ export default async function BuildPage({ params }: { params: Promise<{ id: stri
   if (!snapshot) notFound();
   if (snapshot.organization.ownerUserId && snapshot.organization.ownerUserId !== userId) notFound();
 
-  return (
-    <AppMain>
-      <OrgBuild
-        data={{
-          organizationId: id,
-          github: snapshot.github,
-          buildConfig: snapshot.buildConfig,
-          builds: snapshot.builds,
-        }}
-      />
-    </AppMain>
-  );
+  return <OrgShell id={id} tab="build" />;
 }

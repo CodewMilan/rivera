@@ -30,10 +30,13 @@ async function apiFetch(path: string, init?: RequestInit): Promise<unknown> {
   return data;
 }
 
-export function OrgBuild({ data }: { data: BuildBoardData }) {
+export function OrgBuild({ data, compact = false }: { data: BuildBoardData; compact?: boolean }) {
   const [github, setGithub] = useState<GitHubStatus>(data.github);
   const [config, setConfig] = useState<BuildConfig>(data.buildConfig);
   const [builds, setBuilds] = useState<BuildRun[]>(data.builds);
+  const [setupOpen, setSetupOpen] = useState(
+    !(data.github.connected && data.buildConfig.cursorApiKeySet && Boolean(data.buildConfig.repoFullName)),
+  );
   const [repos, setRepos] = useState<GitHubRepoSummary[]>([]);
   const [reposLoading, setReposLoading] = useState(false);
   const [reposError, setReposError] = useState<string | null>(null);
@@ -65,6 +68,11 @@ export function OrgBuild({ data }: { data: BuildBoardData }) {
       );
     }
   }, []);
+
+  useEffect(() => {
+    setGithub(data.github);
+    setBuilds(data.builds);
+  }, [data.github, data.builds]);
 
   useEffect(() => {
     if (!github.connected) return;
@@ -191,19 +199,50 @@ export function OrgBuild({ data }: { data: BuildBoardData }) {
 
   const canStart =
     config.cursorApiKeySet && Boolean(config.repoFullName) && Boolean(config.branch || selectedRepo?.defaultBranch);
+  const ready = github.connected && config.cursorApiKeySet && Boolean(config.repoFullName);
+  const showSetup = setupOpen || !ready;
 
   return (
     <div className="space-y-8">
-      <header>
-        <p className="text-[13.4px] leading-[30.24px] text-[#c2b8ff]">Development</p>
-        <h1 className="mt-2 text-[36px] font-normal leading-[44px] tracking-[-1.2px] text-[#f4f2f0]">
-          Ship the plan with Cursor
-        </h1>
-        <p className="mt-2 max-w-2xl text-[15px] leading-[24px] text-[#928c97]">
-          Rivera compiles research, strategy, and engineering into one brief and hands it to a Cursor cloud agent.
-          The agent runs on a Cursor VM, writes code against your GitHub repo, and opens a pull request.
+      {compact ? (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h3 className="text-[15px] font-medium text-[#f4f2f0]">Build with Cursor</h3>
+            <p className="mt-1 max-w-prose text-sm leading-6 text-[#928c97]">
+              Compile the run into a brief and dispatch a Cursor cloud agent against your repo.
+            </p>
+          </div>
+          {ready ? (
+            <button
+              type="button"
+              onClick={() => setSetupOpen((value) => !value)}
+              className="inline-flex min-h-11 items-center rounded-[5px] px-3 text-sm text-[#928c97] hover:text-[#f4f2f0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff]"
+            >
+              {showSetup ? "Hide setup" : "Change setup"}
+            </button>
+          ) : null}
+        </div>
+      ) : (
+        <header>
+          <p className="text-[13.4px] leading-[30.24px] text-[#c2b8ff]">Development</p>
+          <h1 className="mt-2 text-[36px] font-normal leading-[44px] tracking-[-1.2px] text-[#f4f2f0]">
+            Ship the plan with Cursor
+          </h1>
+          <p className="mt-2 max-w-2xl text-[15px] leading-[24px] text-[#928c97]">
+            Rivera compiles research, strategy, and engineering into one brief and hands it to a Cursor cloud agent.
+            The agent runs on a Cursor VM, writes code against your GitHub repo, and opens a pull request.
+          </p>
+        </header>
+      )}
+      {compact && ready && !showSetup ? (
+        <p className="text-sm text-[#928c97]">
+          GitHub <span className="font-mono text-[#f4f2f0]">{github.login}</span>
+          <span className="mx-2 text-white/20">·</span>
+          Cursor connected
+          <span className="mx-2 text-white/20">·</span>
+          <span className="font-mono text-[#f4f2f0]">{config.repoFullName}</span>
         </p>
-      </header>
+      ) : null}
 
       {error ? (
         <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">
@@ -212,6 +251,7 @@ export function OrgBuild({ data }: { data: BuildBoardData }) {
       ) : null}
       {notice ? <p className="text-xs text-[#c2b8ff]">{notice}</p> : null}
 
+      {showSetup ? (
       <section className="grid gap-6 lg:grid-cols-2">
         <Panel
           title="1. Connect GitHub"
@@ -406,10 +446,11 @@ export function OrgBuild({ data }: { data: BuildBoardData }) {
           </p>
         </Panel>
       </section>
+      ) : null}
 
       <section className="rounded-[10px] bg-[rgba(39,38,45,0.8)] p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-medium">5. Review the brief</h2>
+          <h2 className="text-sm font-medium">{showSetup ? "5. Review the brief" : "Review the brief"}</h2>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"

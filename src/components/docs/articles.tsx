@@ -83,7 +83,7 @@ pnpm dev`}</CodeBlock>
       <Steps>
         <li>Sign in or create an account.</li>
         <li>Describe the product you want to launch and start the org.</li>
-        <li>Watch Overview, Agents, Tasks, and Timeline as the org works. Hiring roles can wait until later.</li>
+        <li>Watch Now, Work, and Launch as the org works. Hiring roles can wait until later.</li>
       </Steps>
       <Callout title="Demo goal">
         Build a developer tool that helps Stellar developers debug Soroban transactions in 30 days with a $500 budget.
@@ -200,18 +200,14 @@ function Dashboard() {
   return (
     <>
       <p>
-        The organization page is the live console. It polls every two seconds. Tabs match the work, not a chat log.
+        The organization page is the live console. It polls every two seconds. Three views cover the work — not a chat log.
       </p>
       <DocTable
         headers={["Tab", "What it shows"]}
         rows={[
-          ["Overview", "Goal, phase, budget used, blocked work, pending approvals, inbox, optional hiring shortlist"],
-          ["Agents", "Role, status, current task, confidence, last action"],
-          ["Tasks", "Assignment, dependencies, cost, evaluation score"],
-          ["Timeline", "Created, assigned, tool calls, debates, artifacts, approvals"],
-          ["Decisions", "Question, agent proposals, CEO call, confidence"],
-          ["Content", "Campaign items, captions, media, review actions"],
-          ["Report", "Opportunity score, risks, recommended next steps"],
+          ["Now", "Phase, budget, what needs you, live agents, inbox, latest activity"],
+          ["Work", "Tasks by status, research evidence, hiring shortlist, full timeline"],
+          ["Launch", "Report scores, content to approve, decisions, Cursor build"],
         ]}
       />
       <p>
@@ -239,7 +235,7 @@ function Approvals() {
         ]}
       />
       <p>
-        Pending approvals sit on Overview. Approve or reject from the dashboard. Expired approvals cannot be granted.
+        Pending approvals sit on Now. Approve or reject from the dashboard. Expired approvals cannot be granted.
         The activity timeline records every request, grant, and rejection.
       </p>
       <Callout tone="warn" title="Publish">
@@ -291,7 +287,7 @@ function Inbox() {
         <li>
           Set <InlineCode>GOOGLE_CLIENT_ID</InlineCode> and <InlineCode>GOOGLE_CLIENT_SECRET</InlineCode>.
         </li>
-        <li>On the org Overview, connect Gmail, then Scan inbox.</li>
+        <li>On Now, connect Gmail, then Scan inbox.</li>
       </Steps>
       <p>
         Without Google credentials, Preview sample inbox loads labeled demo mail so the rest of the run still has an
