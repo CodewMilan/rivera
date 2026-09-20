@@ -189,6 +189,64 @@ function pinFounderPlan(plan: ReturnType<typeof demoCeoPlan>): ReturnType<typeof
   };
 }
 
+async function searchCompetitorSources(deps: OrchestratorDeps, org: Organization, run: Run) {
+  const queries = [
+    `site:reddit.com ${org.goal}`,
+    `site:news.ycombinator.com ${org.goal}`,
+    `${org.goal} competitors OR alternatives`,
+  ];
+  const findings: unknown[] = [];
+  for (const query of queries) {
+    try {
+      const results = await deps.search.search(query);
+      findings.push({ query, results });
+      await appendEvent(deps.store, {
+        organizationId: org.id,
+        runId: run.id,
+        type: "tool.called",
+        summary: `competitor search returned ${results.length} results for "${query.slice(0, 60)}"`,
+        payload: { tool: "webSearch", query, results },
+      });
+    } catch (error) {
+      await appendEvent(deps.store, {
+        organizationId: org.id,
+        runId: run.id,
+        type: "tool.failed",
+        summary: `competitor search failed: ${error instanceof Error ? error.message : "error"}`,
+      });
+    }
+  }
+  return findings;
+}
+
+async function searchHiringSources(deps: OrchestratorDeps, org: Organization, run: Run) {
+  const roles = org.hiringRoles?.length ? org.hiringRoles : ["Founding Engineer"];
+  const domainHint = org.technology || org.domain || org.goal;
+  const findings: unknown[] = [];
+  for (const role of roles) {
+    const query = `site:linkedin.com/in "${role}" ${domainHint}`;
+    try {
+      const results = await deps.search.search(query);
+      findings.push({ role, results });
+      await appendEvent(deps.store, {
+        organizationId: org.id,
+        runId: run.id,
+        type: "tool.called",
+        summary: `hiring search returned ${results.length} candidates for ${role}`,
+        payload: { tool: "webSearch", role, query, results },
+      });
+    } catch (error) {
+      await appendEvent(deps.store, {
+        organizationId: org.id,
+        runId: run.id,
+        type: "tool.failed",
+        summary: `hiring search failed for ${role}: ${error instanceof Error ? error.message : "error"}`,
+      });
+    }
+  }
+  return findings;
+}
+
 function specialistPrompt(agentType: AgentType): string {
   const jobs: Partial<Record<AgentType, string>> = {
     research:
@@ -199,6 +257,10 @@ function specialistPrompt(agentType: AgentType): string {
       "Plan a 30-day MVP that fits the budget. Cut scope. Include architecture and cost risks.",
     social_media:
       "Write launch posts the founder can publish. Keep claims conservative.",
+    hiring:
+      "extraFindings contains public LinkedIn search results with the role attached. Group them by role and recommend two names per role to reach out to. Put profile URLs in evidence.",
+    competitor:
+      "extraFindings contains Reddit, Hacker News, and open-web results about competing products. List the top 3-5 competitors with a one-line differentiator. Put source URLs in evidence.",
   };
   const job = jobs[agentType] ?? "Coordinate the next Rivera step.";
   return `You are the ${agentType} agent in Rivera, an AI product-launch organization. ${job} Return JSON matching the agent output schema.`;
@@ -665,11 +727,18 @@ export async function runOrganization(runId: string, deps: OrchestratorDeps): Pr
             summary: `github search failed: ${error instanceof Error ? error.message : "error"}`,
           });
         }
-        const result = await runTypedTasks(deps, org, run, ["research"], {
+        let researchResult = await runTypedTasks(deps, org, run, ["research"], {
           research: [...search, ...github],
         });
-        org = result.org;
-        run = await transition(deps.store, result.run, "feasibility");
+        org = researchResult.org;
+        run = researchResult.run;
+
+        const competitorHits = await searchCompetitorSources(deps, org, run);
+        const competitorResult = await runTypedTasks(deps, org, run, ["competitor"], {
+          competitor: competitorHits,
+        });
+        org = competitorResult.org;
+        run = await transition(deps.store, competitorResult.run, "feasibility");
         break;
       }
       case "feasibility": {
@@ -687,7 +756,14 @@ export async function runOrganization(runId: string, deps: OrchestratorDeps): Pr
           engineering: [research, strategy].filter(Boolean),
         });
         org = result.org;
-        run = await transition(deps.store, result.run, "debate");
+        run = result.run;
+
+        const hiringHits = await searchHiringSources(deps, org, run);
+        const hiringResult = await runTypedTasks(deps, org, run, ["hiring"], {
+          hiring: hiringHits,
+        });
+        org = hiringResult.org;
+        run = await transition(deps.store, hiringResult.run, "debate");
         break;
       }
       case "debate":

@@ -20,6 +20,7 @@ export const intakeSchema = z.object({
   technology: z.string().trim().max(400).optional(),
   domain: z.string().trim().max(120).optional(),
   preferredChannels: z.array(platformSchema).optional(),
+  hiringRoles: z.array(z.string().trim().min(2).max(80)).max(8).optional(),
   autoPublish: z.boolean().optional(),
 });
 

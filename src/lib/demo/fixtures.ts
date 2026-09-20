@@ -53,6 +53,18 @@ export const AGENT_ROSTER: Array<{
     objective: "Turn the approved strategy into platform-specific launch content.",
   },
   {
+    type: "hiring",
+    name: "Hiring",
+    tools: ["webSearch"],
+    objective: "Find candidate LinkedIn profiles for the roles the founder needs.",
+  },
+  {
+    type: "competitor",
+    name: "Competitor",
+    tools: ["webSearch"],
+    objective: "Surface competing products from Reddit, Hacker News, and the open web.",
+  },
+  {
     type: "evaluator",
     name: "Evaluator",
     tools: [],
@@ -60,7 +72,20 @@ export const AGENT_ROSTER: Array<{
   },
 ];
 
-export const FOUNDER_AGENT_TYPES = ["research", "strategy", "engineering", "social_media"] as const;
+export const FOUNDER_AGENT_TYPES = [
+  "research",
+  "competitor",
+  "strategy",
+  "engineering",
+  "hiring",
+  "social_media",
+] as const;
+
+export const DEFAULT_HIRING_ROLES = [
+  "Founding Engineer",
+  "AI Engineer",
+  "Systems Architect",
+];
 
 export const FOUNDER_AGENTS = AGENT_ROSTER.filter((agent) =>
   (FOUNDER_AGENT_TYPES as readonly string[]).includes(agent.type),
@@ -89,6 +114,20 @@ export const FOUNDER_TASKS = [
     title: "Plan the 30-day MVP",
     description: "Architecture, scope cuts, and a budget that fits the deadline.",
     agentType: "engineering" as const,
+    dependsOnTitles: ["Choose the wedge"],
+    estimatedCostCents: 20,
+  },
+  {
+    title: "Scan the competition",
+    description: "Reddit, Hacker News, and the open web for products doing this today.",
+    agentType: "competitor" as const,
+    dependsOnTitles: ["Research the problem"],
+    estimatedCostCents: 20,
+  },
+  {
+    title: "Shortlist hires",
+    description: "Find public LinkedIn profiles for the roles the founder needs.",
+    agentType: "hiring" as const,
     dependsOnTitles: ["Choose the wedge"],
     estimatedCostCents: 20,
   },
@@ -201,6 +240,22 @@ export function demoSpecialistOutput(agentType: AgentType, goal: string) {
         findings: ["Channels: X + LinkedIn", "Publish stays off until approval"],
         recommendation: "Review captions before any publish.",
         artifacts: ["content-campaign"],
+      };
+    case "hiring":
+      return {
+        ...shared,
+        summary: "Shortlist of public LinkedIn profiles for the requested roles.",
+        findings: ["Roles pulled from intake; profiles came from web search"],
+        risks: ["LinkedIn results depend on public indexing; always double-check"],
+        recommendation: "Reach out to two names per role this week.",
+      };
+    case "competitor":
+      return {
+        ...shared,
+        summary: "Found a handful of products and community threads covering the same job.",
+        findings: ["Reddit + Hacker News threads gave the most direct comparisons"],
+        risks: ["An incumbent may already own this wedge"],
+        recommendation: "Pick one competitor to explicitly beat on speed or price.",
       };
     case "evaluator":
       return {

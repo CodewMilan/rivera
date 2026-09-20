@@ -10,6 +10,15 @@ const EXAMPLES = [
   "Launch a local-first CLI for decoding failed smart-contract simulations.",
 ];
 
+const ROLE_PRESETS = [
+  "Founding Engineer",
+  "AI Engineer",
+  "Systems Architect",
+  "Full-stack Engineer",
+  "Product Designer",
+  "Developer Advocate",
+];
+
 function defaultDeadline() {
   const date = new Date();
   date.setUTCDate(date.getUTCDate() + 30);
@@ -20,6 +29,7 @@ export function IntakeForm() {
   const router = useRouter();
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const [goal, setGoal] = useState("");
+  const [roles, setRoles] = useState<string[]>(["Founding Engineer", "AI Engineer"]);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -28,6 +38,12 @@ export function IntakeForm() {
     if (!area) return;
     area.style.height = "auto";
     area.style.height = `${Math.min(Math.max(area.scrollHeight, 88), 220)}px`;
+  }
+
+  function toggleRole(role: string) {
+    setRoles((current) =>
+      current.includes(role) ? current.filter((item) => item !== role) : [...current, role],
+    );
   }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -43,6 +59,7 @@ export function IntakeForm() {
         deadline: defaultDeadline(),
         budgetUsd: 500,
         preferredChannels: ["x", "linkedin", "instagram", "tiktok"],
+        hiringRoles: roles,
         autoPublish: false,
       }),
     });
@@ -111,6 +128,36 @@ export function IntakeForm() {
           {error}
         </p>
       ) : null}
+
+      <fieldset className="mt-6 rounded-[12px] border border-white/10 bg-[#1a1720] p-4">
+        <legend className="px-1 text-xs uppercase tracking-wide text-[#928c97]">
+          Roles to shortlist
+        </legend>
+        <p className="text-xs text-[#928c97]">
+          Rivera scans public LinkedIn profiles for each role selected.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {ROLE_PRESETS.map((role) => {
+            const selected = roles.includes(role);
+            return (
+              <button
+                key={role}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => toggleRole(role)}
+                className={cn(
+                  "min-h-11 rounded-full border px-4 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c2b8ff]",
+                  selected
+                    ? "border-[#c2b8ff] bg-[rgba(194,184,255,0.15)] text-[#f4f2f0]"
+                    : "border-white/15 text-[#c2b8ff] hover:border-[#c2b8ff]",
+                )}
+              >
+                {role}
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
 
       <ul className="mt-5 flex flex-wrap justify-center gap-2">
         {EXAMPLES.map((example) => (

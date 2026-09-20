@@ -27,6 +27,8 @@ export type AgentType =
   | "finance"
   | "marketing"
   | "social_media"
+  | "hiring"
+  | "competitor"
   | "evaluator";
 
 export type AgentStatus = "idle" | "working" | "blocked" | "review" | "failed";
@@ -75,6 +77,7 @@ export type Organization = {
   targetUser: string;
   technology: string;
   preferredChannels: ContentPlatform[];
+  hiringRoles: string[];
   autoPublish: boolean;
   budgetCents: number;
   budgetUsedCents: number;

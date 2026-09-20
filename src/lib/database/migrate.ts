@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import postgres from "postgres";
+import { createSql } from "@/lib/database/connection";
 import { migratePostgres } from "@/lib/store/postgres";
 
 function loadDotEnv() {
@@ -26,7 +26,7 @@ async function main() {
   if (!url) {
     throw new Error("DATABASE_URL is required to migrate");
   }
-  const sql = postgres(url, { max: 1 });
+  const sql = createSql(url, { max: 1 });
   await migratePostgres(sql);
   await sql.end();
   console.log("Rivera schema is ready");

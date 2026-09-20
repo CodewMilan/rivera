@@ -4,7 +4,7 @@ import { createRun, runOrganization } from "@/lib/orchestration/run";
 import { isTerminal } from "@/lib/orchestration/states";
 import { getRuntime } from "@/lib/runtime";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const WAITING_ON_HUMAN = new Set(["review", "approval", "scheduled", "published", "evaluation"]);
 

@@ -2,6 +2,9 @@
   "name": "rivera",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "NODE_OPTIONS=--dns-result-order=ipv4first next dev --hostname localhost --port 3000",
     "build": "next build",
@@ -10,7 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "migrate": "tsx --env-file=.env src/lib/database/migrate.ts"
+    "migrate": "tsx src/lib/database/migrate.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.4",

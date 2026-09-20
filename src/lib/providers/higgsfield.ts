@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { higgsfieldWebhookUrl } from "@/lib/config";
 import { createId } from "@/lib/ids";
 
 export type MediaInput = {
@@ -155,7 +156,8 @@ export class HiggsfieldProvider implements MediaProvider {
       throw new Error("Media job exceeds cost ceiling");
     }
     const url = new URL(path, this.options.baseUrl.endsWith("/") ? this.options.baseUrl : `${this.options.baseUrl}/`);
-    if (input.webhookUrl) url.searchParams.set("hf_webhook", input.webhookUrl);
+    const webhookUrl = input.webhookUrl || higgsfieldWebhookUrl();
+    if (webhookUrl) url.searchParams.set("hf_webhook", webhookUrl);
     const response = await fetch(url, {
       method: "POST",
       headers: this.headers(),

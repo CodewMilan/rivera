@@ -9,6 +9,8 @@ const types = [
   "finance",
   "marketing",
   "social_media",
+  "hiring",
+  "competitor",
   "evaluator",
 ] as const;
 

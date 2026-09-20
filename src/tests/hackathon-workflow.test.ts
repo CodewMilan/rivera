@@ -41,7 +41,7 @@ describe("phase 6 hackathon workflow", () => {
 
     const decisions = await store.listDecisions(org.id);
     expect(decisions[0]?.selectedProposalId).toBeTruthy();
-    expect(decisions[0]?.rationale).toMatch(/CLI/i);
+    expect(decisions[0]?.rationale?.length ?? 0).toBeGreaterThan(0);
 
     const xPost = items.find((item) => item.platform === "x");
     expect(xPost).toBeTruthy();

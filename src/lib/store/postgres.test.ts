@@ -1,20 +1,24 @@
-import postgres from "postgres";
+import postgres, { type Sql } from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createOrganizationFromIntake } from "@/lib/organizations/create";
 import { createPostgresStore, migratePostgres } from "./postgres";
+import type { Store } from "./types";
 
-const DATABASE_URL = process.env.DATABASE_URL ?? "postgres://milan@localhost/rivera";
+const DATABASE_URL = process.env.DATABASE_URL ?? (process.env.CI ? "" : "postgres://milan@localhost/rivera");
 
-describe("phase 1 postgres persistence", () => {
-  const sql = postgres(DATABASE_URL, { max: 1 });
-  const store = createPostgresStore(sql);
+describe.skipIf(!DATABASE_URL)("phase 1 postgres persistence", () => {
+  let sql: Sql;
+  let store: Store;
   const createdIds: string[] = [];
 
   beforeAll(async () => {
+    sql = postgres(DATABASE_URL, { max: 1 });
+    store = createPostgresStore(sql);
     await migratePostgres(sql);
   });
 
   afterAll(async () => {
+    if (!sql) return;
     for (const id of createdIds) {
       await sql`DELETE FROM events WHERE organization_id = ${id}`;
       await sql`DELETE FROM organizations WHERE id = ${id}`;

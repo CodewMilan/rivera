@@ -1,6 +1,6 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import postgres, { type Sql } from "postgres";
+import { type Sql } from "postgres";
+import { createSql } from "@/lib/database/connection";
+import { SCHEMA_SQL } from "@/lib/database/schema";
 import type {
   Agent,
   Approval,
@@ -27,9 +27,7 @@ function jsonValue(sql: Sql, value: unknown) {
 }
 
 export async function migratePostgres(sql: Sql): Promise<void> {
-  const schemaPath = path.join(process.cwd(), "src/lib/database/schema.sql");
-  const schema = readFileSync(schemaPath, "utf8");
-  await sql.unsafe(schema);
+  await sql.unsafe(SCHEMA_SQL);
 }
 
 export function createPostgresStore(sql: Sql): Store {
@@ -304,7 +302,7 @@ export function createPostgresStore(sql: Sql): Store {
 }
 
 export async function connectPostgres(url: string): Promise<Store> {
-  const sql = postgres(url, { max: 5 });
+  const sql = createSql(url);
   await migratePostgres(sql);
   return createPostgresStore(sql);
 }
