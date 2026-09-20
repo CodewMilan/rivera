@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+.clerk
+.data
+e2e
+playwright-report
+test-results
+docs
