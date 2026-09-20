@@ -60,6 +60,47 @@ export const AGENT_ROSTER: Array<{
   },
 ];
 
+export const FOUNDER_AGENT_TYPES = ["research", "strategy", "engineering", "social_media"] as const;
+
+export const FOUNDER_AGENTS = AGENT_ROSTER.filter((agent) =>
+  (FOUNDER_AGENT_TYPES as readonly string[]).includes(agent.type),
+).map((agent) => ({
+  type: agent.type as (typeof FOUNDER_AGENT_TYPES)[number],
+  name: agent.name,
+  tools: agent.tools,
+  objective: agent.objective,
+}));
+
+export const FOUNDER_TASKS = [
+  {
+    title: "Research the problem",
+    description: "Find public evidence that this user pain is real.",
+    agentType: "research" as const,
+    estimatedCostCents: 40,
+  },
+  {
+    title: "Choose the wedge",
+    description: "Pick what to ship first, who it is for, and the go / no-go call.",
+    agentType: "strategy" as const,
+    dependsOnTitles: ["Research the problem"],
+    estimatedCostCents: 20,
+  },
+  {
+    title: "Plan the 30-day MVP",
+    description: "Architecture, scope cuts, and a budget that fits the deadline.",
+    agentType: "engineering" as const,
+    dependsOnTitles: ["Choose the wedge"],
+    estimatedCostCents: 20,
+  },
+  {
+    title: "Draft launch posts",
+    description: "Write X and LinkedIn posts the founder can edit, approve, and publish.",
+    agentType: "social_media" as const,
+    dependsOnTitles: ["Choose the wedge"],
+    estimatedCostCents: 20,
+  },
+];
+
 export function demoCeoPlan(goal: string): DemoCeoPlan {
   const stellar = /stellar|soroban/i.test(goal);
   return {
@@ -72,61 +113,12 @@ export function demoCeoPlan(goal: string): DemoCeoPlan {
       ? "Build a CLI first. Position a hosted dashboard as the paid upgrade."
       : "Ship the smallest demoable wedge, then charge for hosted convenience.",
     confidence: 0.78,
-    agents: AGENT_ROSTER.filter((agent) => agent.type !== "ceo").map((agent) => ({
-      type: agent.type as Exclude<AgentType, "ceo">,
+    agents: FOUNDER_AGENTS.map((agent) => ({
+      type: agent.type,
       objective: agent.objective,
       tools: agent.tools,
     })),
-    tasks: [
-      {
-        title: "Research developer pain",
-        description: "Collect public evidence of the debugging problem.",
-        agentType: "research" as const,
-        estimatedCostCents: 40,
-      },
-      {
-        title: "Choose the product wedge",
-        description: "Recommend CLI vs hosted dashboard and the first user.",
-        agentType: "strategy" as const,
-        dependsOnTitles: ["Research developer pain"],
-        estimatedCostCents: 20,
-      },
-      {
-        title: "Draft MVP architecture",
-        description: "Repository, API, and test plan that fits 30 days.",
-        agentType: "engineering" as const,
-        dependsOnTitles: ["Choose the product wedge"],
-        estimatedCostCents: 20,
-      },
-      {
-        title: "Budget the first 30 days",
-        description: "Cost the build, tools, and media against $500.",
-        agentType: "finance" as const,
-        dependsOnTitles: ["Draft MVP architecture"],
-        estimatedCostCents: 10,
-      },
-      {
-        title: "Write launch messaging",
-        description: "Name, positioning, and first-user acquisition.",
-        agentType: "marketing" as const,
-        dependsOnTitles: ["Choose the product wedge"],
-        estimatedCostCents: 15,
-      },
-      {
-        title: "Create social campaign",
-        description: "Hooks, captions, and platform variants.",
-        agentType: "social_media" as const,
-        dependsOnTitles: ["Write launch messaging"],
-        estimatedCostCents: 20,
-      },
-      {
-        title: "Evaluate the package",
-        description: "Score evidence, feasibility, and missing work.",
-        agentType: "evaluator" as const,
-        dependsOnTitles: ["Budget the first 30 days", "Create social campaign"],
-        estimatedCostCents: 10,
-      },
-    ],
+    tasks: FOUNDER_TASKS.map((task) => ({ ...task })),
   };
 }
 
@@ -205,8 +197,8 @@ export function demoSpecialistOutput(agentType: AgentType, goal: string) {
     case "social_media":
       return {
         ...shared,
-        summary: "Four-platform launch kit is drafted and waiting for human review.",
-        findings: ["Pillars: problem, demo, founder note, countdown"],
+        summary: "Launch posts are drafted and waiting for the founder to review.",
+        findings: ["Channels: X + LinkedIn", "Publish stays off until approval"],
         recommendation: "Review captions before any publish.",
         artifacts: ["content-campaign"],
       };
@@ -235,27 +227,27 @@ export function demoSpecialistOutput(agentType: AgentType, goal: string) {
   }
 }
 
-export function demoContentItems(platforms: ContentPlatform[]) {
-  const defaults: ContentPlatform[] = ["x", "linkedin", "instagram", "tiktok"];
+export function demoContentItems(platforms: ContentPlatform[], productName = "the product") {
+  const defaults: ContentPlatform[] = ["x", "linkedin"];
   const list = platforms.length ? platforms : defaults;
   return list.map((platform) => ({
     platform,
     type: platform === "x" || platform === "linkedin" ? ("text" as const) : ("video" as const),
     title:
       platform === "linkedin"
-        ? "Why Soroban errors still waste a day"
-        : "See the failed Soroban tx in one command",
-    hook: "Your simulate() just failed. Now what?",
+        ? `Why we're building ${productName}`
+        : `See ${productName} in one command`,
+    hook: "The current loop is too slow. Here's the narrower job.",
     script:
       platform === "x"
         ? undefined
-        : "Open with the raw error. Cut to one CLI command. End on the decoded auth and events.",
+        : "Open with the failed workflow. Cut to the 30-day wedge. End on a single call to action.",
     caption:
       platform === "linkedin"
-        ? "We are building Trace: a 30-day CLI so Stellar developers can decode a failed Soroban transaction without a hosted stack."
-        : "Trace: decode a failed Soroban transaction in one command. Built in 30 days on $500.",
-    callToAction: "Follow for the CLI drop",
-    hashtags: ["#Stellar", "#Soroban", "#devtooling"],
-    claimsUsed: ["30-day MVP", "local-first CLI", "$500 budget"],
+        ? `We're building ${productName} so the target user can finish the painful job without a hosted stack.`
+        : `${productName}: the 30-day wedge. Built on a tight budget. Review before anything publishes.`,
+    callToAction: "Reply if this is your job",
+    hashtags: ["#buildinpublic", "#devtools"],
+    claimsUsed: ["30-day MVP", "founder-approved publish"],
   }));
 }

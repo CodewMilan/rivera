@@ -1,6 +1,6 @@
-import { ceoPlanSchema } from "@/lib/agents/schema";
+import { ceoPlanSchema, launchPostsSchema } from "@/lib/agents/schema";
 import { nowIso } from "@/lib/clock";
-import { AGENT_ROSTER, demoCeoPlan, demoContentItems, demoSpecialistOutput } from "@/lib/demo/fixtures";
+import { AGENT_ROSTER, FOUNDER_AGENTS, FOUNDER_TASKS, demoCeoPlan, demoContentItems, demoSpecialistOutput } from "@/lib/demo/fixtures";
 import { appendEvent } from "@/lib/events/log";
 import { assembleReport, evaluateAgentOutput, rejectIfOverBudget } from "@/lib/evaluation/report";
 import { createId } from "@/lib/ids";
@@ -121,7 +121,7 @@ async function executeAgentTask(
     const completed = await completeJson(
       deps.llm,
       {
-        system: `You are the ${agentType} agent in Rivera, an AI product-launch organization. Return JSON matching the agent output schema.`,
+        system: specialistPrompt(agentType),
         user: JSON.stringify({
           goal: org.goal,
           targetUser: org.targetUser,
@@ -177,6 +177,33 @@ async function executeAgentTask(
   return { org: charged.org, run: charged.run, output };
 }
 
+function pinFounderPlan(plan: ReturnType<typeof demoCeoPlan>): ReturnType<typeof demoCeoPlan> {
+  return {
+    ...plan,
+    agents: FOUNDER_AGENTS.map((agent) => ({
+      type: agent.type,
+      objective: agent.objective,
+      tools: agent.tools,
+    })),
+    tasks: FOUNDER_TASKS.map((task) => ({ ...task })),
+  };
+}
+
+function specialistPrompt(agentType: AgentType): string {
+  const jobs: Partial<Record<AgentType, string>> = {
+    research:
+      "Use extraFindings as sources. Put source URLs in evidence. Decide whether the user pain is real.",
+    strategy:
+      "Choose the first wedge: who it is for, what to ship in 30 days, and go / no-go.",
+    engineering:
+      "Plan a 30-day MVP that fits the budget. Cut scope. Include architecture and cost risks.",
+    social_media:
+      "Write launch posts the founder can publish. Keep claims conservative.",
+  };
+  const job = jobs[agentType] ?? "Coordinate the next Rivera step.";
+  return `You are the ${agentType} agent in Rivera, an AI product-launch organization. ${job} Return JSON matching the agent output schema.`;
+}
+
 async function runCeoPlan(deps: OrchestratorDeps, org: Organization, run: Run) {
   let plan = demoCeoPlan(org.goal);
   let demo = true;
@@ -185,7 +212,8 @@ async function runCeoPlan(deps: OrchestratorDeps, org: Organization, run: Run) {
     const completed = await completeJson(
       deps.llm,
       {
-        system: "You are Rivera CEO. Return JSON for organizationName, domain, summary, recommendation, confidence, agents[], tasks[].",
+        system:
+          "You are Rivera CEO staffing a four-job launch: research the problem, choose the wedge, plan the 30-day MVP, and draft launch posts. Return JSON for organizationName, domain, summary, recommendation, confidence, agents[], tasks[]. Always include those four jobs.",
         user: JSON.stringify({
           goal: org.goal,
           targetUser: org.targetUser,
@@ -196,7 +224,7 @@ async function runCeoPlan(deps: OrchestratorDeps, org: Organization, run: Run) {
       },
       (value) => ceoPlanSchema.parse(value),
     );
-    plan = completed.value;
+    plan = pinFounderPlan(completed.value);
     demo = completed.demo;
     costCents = completed.costCents;
   } catch {
@@ -322,49 +350,53 @@ async function runTypedTasks(
 async function createDecision(deps: OrchestratorDeps, org: Organization, run: Run) {
   const tasks = await deps.store.listTasksByRun(run.id);
   const outputs = tasks
-    .map((task) => task.output as { recommendation?: string; evidence?: unknown[]; risks?: unknown[]; agentType?: AgentType } | undefined)
-    .filter(Boolean);
+    .map((task) => task.output as AgentOutput | undefined)
+    .filter((output): output is AgentOutput => Boolean(output));
 
-  const question = "Should the MVP be a CLI or a hosted dashboard?";
-  const proposals = [
+  const byType = (type: AgentType) => outputs.find((item) => item.agentType === type);
+  const research = byType("research");
+  const strategy = byType("strategy");
+  const engineering = byType("engineering");
+
+  const question = "What should we ship in the first 30 days?";
+  const fallbacks: Array<{ agentType: AgentType; recommendation: string; risks: string[] }> = [
     {
-      id: createId(),
-      agentType: "engineering" as const,
-      recommendation:
-        outputs.find((item) => item?.agentType === "engineering")?.recommendation ??
-        "CLI is faster to build and stays inside the $500 budget.",
-      evidence: outputs.find((item) => item?.agentType === "engineering")?.evidence ?? [],
-      risks: ["Less flashy for a demo recording"],
+      agentType: "research",
+      recommendation: research?.recommendation ?? "The pain is real enough to justify a narrow 30-day wedge.",
+      risks: (research?.risks ?? ["Public evidence is still thin"]).map(String),
     },
     {
-      id: createId(),
-      agentType: "finance" as const,
+      agentType: "strategy",
       recommendation:
-        outputs.find((item) => item?.agentType === "finance")?.recommendation ??
-        "Hosted infrastructure increases cost and should wait.",
-      evidence: [],
-      risks: ["Hosting can spend the whole media budget"],
+        strategy?.recommendation ?? "Ship the smallest demoable wedge first. Charge later for hosted convenience.",
+      risks: (strategy?.risks ?? ["A wide MVP misses the deadline"]).map(String),
     },
     {
-      id: createId(),
-      agentType: "marketing" as const,
+      agentType: "engineering",
       recommendation:
-        outputs.find((item) => item?.agentType === "marketing")?.recommendation ??
-        "A hosted dashboard is easier to screenshot, but the CLI demo can still be filmed.",
-      evidence: [],
-      risks: ["A dashboard-first story overpromises"],
+        engineering?.recommendation ?? "Keep the first version local-first so infrastructure does not eat the budget.",
+      risks: (engineering?.risks ?? ["Hosting and auth will blow the 30-day cap"]).map(String),
     },
   ];
 
+  const proposals = fallbacks.map((item) => ({
+    id: createId(),
+    agentType: item.agentType,
+    recommendation: item.recommendation,
+    evidence: byType(item.agentType)?.evidence ?? [],
+    risks: item.risks,
+  }));
+
+  const selected = proposals.find((item) => item.agentType === "strategy") ?? proposals[0];
   const decision = await deps.store.createDecision({
     id: createId(),
     organizationId: org.id,
     runId: run.id,
     question,
     proposals,
-    selectedProposalId: proposals[0].id,
-    rationale: "Build the CLI first and position the hosted dashboard as a paid upgrade.",
-    confidence: 0.8,
+    selectedProposalId: selected.id,
+    rationale: selected.recommendation,
+    confidence: strategy?.confidence ?? 0.78,
     status: "approved",
     createdAt: nowIso(),
   });
@@ -387,10 +419,53 @@ async function createCampaign(deps: OrchestratorDeps, org: Organization, run: Ru
     organizationId: org.id,
     runId: run.id,
     title: `${org.name} launch`,
-    pillars: ["Problem", "Product demo", "Founder note", "Countdown"],
+    pillars: ["Problem", "Wedge", "Founder note"],
     createdAt: nowIso(),
   });
-  const drafts = demoContentItems(org.preferredChannels);
+  const channels = org.preferredChannels.length ? org.preferredChannels : ["x", "linkedin"];
+  const tasks = await deps.store.listTasksByRun(run.id);
+  const context = tasks
+    .map((task) => task.output as AgentOutput | undefined)
+    .filter((output): output is AgentOutput => Boolean(output))
+    .map((output) => ({
+      agentType: output.agentType,
+      summary: output.summary,
+      recommendation: output.recommendation,
+    }));
+
+  let drafts = demoContentItems(channels, org.name);
+  try {
+    const completed = await completeJson(
+      deps.llm,
+      {
+        system:
+          "Write founder-ready launch posts. Return JSON { posts: [{ platform, type, title, hook, caption, callToAction, hashtags, claimsUsed }] }. Keep claims conservative. X captions must stay under 260 characters.",
+        user: JSON.stringify({
+          name: org.name,
+          goal: org.goal,
+          targetUser: org.targetUser,
+          channels,
+          context,
+        }),
+      },
+      (value) => launchPostsSchema.parse(value),
+    );
+    const byPlatform = new Map(completed.value.posts.map((post) => [post.platform, post]));
+    drafts = channels.map((platform) => {
+      const post = byPlatform.get(platform);
+      const fallback = demoContentItems([platform], org.name)[0];
+      return {
+        ...fallback,
+        ...post,
+        platform,
+        type: post?.type ?? fallback.type,
+        hashtags: post?.hashtags ?? fallback.hashtags,
+        claimsUsed: post?.claimsUsed ?? fallback.claimsUsed,
+      };
+    });
+  } catch {
+    drafts = demoContentItems(channels, org.name);
+  }
   for (const draft of drafts) {
     await deps.store.createContentItem({
       id: createId(),
@@ -598,7 +673,19 @@ export async function runOrganization(runId: string, deps: OrchestratorDeps): Pr
         break;
       }
       case "feasibility": {
-        const result = await runTypedTasks(deps, org, run, ["strategy", "engineering", "finance"]);
+        const tasks = await deps.store.listTasksByRun(run.id);
+        const research = tasks
+          .map((task) => task.output as AgentOutput | undefined)
+          .find((output) => output?.agentType === "research");
+        let result = await runTypedTasks(deps, org, run, ["strategy"], {
+          strategy: research ? [research] : [],
+        });
+        const strategy = (await deps.store.listTasksByRun(run.id))
+          .map((task) => task.output as AgentOutput | undefined)
+          .find((output) => output?.agentType === "strategy");
+        result = await runTypedTasks(deps, result.org, result.run, ["engineering"], {
+          engineering: [research, strategy].filter(Boolean),
+        });
         org = result.org;
         run = await transition(deps.store, result.run, "debate");
         break;
@@ -613,7 +700,7 @@ export async function runOrganization(runId: string, deps: OrchestratorDeps): Pr
         run = await transition(deps.store, run, "content_plan");
         break;
       case "content_plan": {
-        const result = await runTypedTasks(deps, org, run, ["marketing", "social_media"]);
+        const result = await runTypedTasks(deps, org, run, ["social_media"]);
         org = result.org;
         await createCampaign(deps, org, result.run);
         run = await transition(deps.store, result.run, "media_generation");

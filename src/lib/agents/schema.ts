@@ -71,6 +71,24 @@ export const ceoPlanSchema = z.object({
     .min(1),
 });
 
+export const launchPostsSchema = z.object({
+  posts: z
+    .array(
+      z.object({
+        platform: z.enum(["x", "linkedin", "instagram", "tiktok"]),
+        type: z.enum(["text", "video", "carousel", "image"]).optional(),
+        title: z.string().min(1),
+        hook: z.string().min(1),
+        caption: z.string().min(1),
+        script: z.string().optional(),
+        callToAction: z.string().optional(),
+        hashtags: z.array(z.string()).default([]),
+        claimsUsed: z.array(z.string()).default([]),
+      }),
+    )
+    .min(1),
+});
+
 export function parseJsonFromModel(text: string): unknown {
   const trimmed = text.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);

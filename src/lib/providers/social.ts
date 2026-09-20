@@ -1,3 +1,5 @@
+import { createHmac, randomBytes } from "node:crypto";
+
 export type SocialDraftInput = {
   platform: "x" | "linkedin" | "instagram" | "tiktok";
   text: string;
@@ -28,6 +30,13 @@ export interface SocialPublisher {
   publish(input: SocialPublishInput): Promise<PublishedPost>;
 }
 
+export type XUserCredentials = {
+  apiKey: string;
+  apiSecret: string;
+  accessToken: string;
+  accessTokenSecret: string;
+};
+
 export class DemoSocialPublisher implements SocialPublisher {
   async createDraft(input: SocialDraftInput): Promise<SocialDraft> {
     return { id: `draft_${input.platform}`, platform: input.platform, text: input.text, demo: true };
@@ -51,8 +60,40 @@ export class DemoSocialPublisher implements SocialPublisher {
   }
 }
 
+function percentEncode(value: string): string {
+  return encodeURIComponent(value).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
+export function xOAuthAuthorizationHeader(
+  credentials: XUserCredentials,
+  method: string,
+  url: string,
+  extras: { nonce?: string; timestamp?: string } = {},
+): string {
+  const params: Record<string, string> = {
+    oauth_consumer_key: credentials.apiKey,
+    oauth_nonce: extras.nonce ?? randomBytes(16).toString("hex"),
+    oauth_signature_method: "HMAC-SHA1",
+    oauth_timestamp: extras.timestamp ?? Math.floor(Date.now() / 1000).toString(),
+    oauth_token: credentials.accessToken,
+    oauth_version: "1.0",
+  };
+  const baseParams = Object.keys(params)
+    .sort()
+    .map((key) => `${percentEncode(key)}=${percentEncode(params[key])}`)
+    .join("&");
+  const baseString = [method.toUpperCase(), percentEncode(url), percentEncode(baseParams)].join("&");
+  const signingKey = `${percentEncode(credentials.apiSecret)}&${percentEncode(credentials.accessTokenSecret)}`;
+  params.oauth_signature = createHmac("sha1", signingKey).update(baseString).digest("base64");
+  const header = Object.keys(params)
+    .sort()
+    .map((key) => `${percentEncode(key)}="${percentEncode(params[key])}"`)
+    .join(", ");
+  return `OAuth ${header}`;
+}
+
 export class XSocialPublisher implements SocialPublisher {
-  constructor(private readonly bearerToken: string) {}
+  constructor(private readonly credentials: XUserCredentials) {}
 
   async createDraft(input: SocialDraftInput): Promise<SocialDraft> {
     return { id: `draft_x`, platform: input.platform, text: input.text, demo: false };
@@ -66,10 +107,11 @@ export class XSocialPublisher implements SocialPublisher {
     if (input.platform !== "x") {
       throw new Error("Only the X publish path is live in this Rivera build");
     }
-    const response = await fetch("https://api.x.com/2/tweets", {
+    const url = "https://api.x.com/2/tweets";
+    const response = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${this.bearerToken}`,
+        Authorization: xOAuthAuthorizationHeader(this.credentials, "POST", url),
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ text: input.text.slice(0, 280) }),
@@ -89,9 +131,12 @@ export class XSocialPublisher implements SocialPublisher {
 }
 
 export function createSocialPublisher(): SocialPublisher {
-  const token = process.env.X_BEARER_TOKEN;
-  if (token && process.env.DEMO_MODE !== "true") {
-    return new XSocialPublisher(token);
+  const apiKey = process.env.X_API_KEY;
+  const apiSecret = process.env.X_API_SECRET;
+  const accessToken = process.env.X_ACCESS_TOKEN;
+  const accessTokenSecret = process.env.X_ACCESS_TOKEN_SECRET;
+  if (apiKey && apiSecret && accessToken && accessTokenSecret && process.env.DEMO_MODE !== "true") {
+    return new XSocialPublisher({ apiKey, apiSecret, accessToken, accessTokenSecret });
   }
   return new DemoSocialPublisher();
 }
