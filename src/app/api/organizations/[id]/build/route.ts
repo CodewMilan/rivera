@@ -1,10 +1,11 @@
+import { requireOrgAccess } from "@/lib/auth/org-guard";
 import { compileBuildBrief } from "@/lib/build/brief";
 import { nowIso } from "@/lib/clock";
+import { decryptSecret } from "@/lib/crypto/secret";
 import { appendEvent } from "@/lib/events/log";
 import { errorJson, json, readJson } from "@/lib/http/json";
-import { createCursorAgent, cursorAgentUrl, mapCursorStatus } from "@/lib/providers/cursor";
-import { getStore } from "@/lib/store";
 import { createId } from "@/lib/ids";
+import { createCursorAgent, cursorAgentUrl, mapCursorStatus } from "@/lib/providers/cursor";
 import type { BuildRun } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -12,18 +13,18 @@ export const maxDuration = 60;
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
-  const store = await getStore();
-  const org = await store.getOrganization(id);
-  if (!org) return errorJson("Organization not found", 404);
-  const builds = await store.listBuildRuns(id);
+  const access = await requireOrgAccess(id);
+  if (access instanceof Response) return access;
+  const builds = await access.store.listBuildRuns(id);
   return json({ builds });
 }
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
-  const store = await getStore();
-  const org = await store.getOrganization(id);
-  if (!org) return errorJson("Organization not found", 404);
+  const access = await requireOrgAccess(id);
+  if (access instanceof Response) return access;
+  const { store, organization } = access;
+
   const body = ((await readJson(request)) ?? {}) as { promptOverride?: string; model?: string };
 
   const config = await store.getBuildConfig(id);
@@ -32,15 +33,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   }
   const secret = await store.getBuildSecret(id);
   if (!secret?.cursorApiKey) {
-    return errorJson("Save your Cursor API key before starting a build", 400);
+    return errorJson("Connect Cursor before starting a build", 400);
   }
+  const apiKey = decryptSecret(secret.cursorApiKey);
 
   const tasks = await store.listTasks(id);
   const prompt =
     typeof body.promptOverride === "string" && body.promptOverride.trim()
       ? body.promptOverride
       : compileBuildBrief({
-          organization: org,
+          organization,
           tasks,
           repoFullName: config.repoFullName,
           branch: config.branch,
@@ -72,7 +74,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   try {
     const agent = await createCursorAgent({
-      apiKey: secret.cursorApiKey,
+      apiKey,
       prompt,
       model,
       repoUrl: config.repoUrl,

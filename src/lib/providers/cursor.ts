@@ -123,6 +123,37 @@ export async function getCursorAgent(apiKey: string, agentId: string): Promise<C
   return normalizeAgent(payload);
 }
 
+export type CursorAccount = {
+  label: string;
+  keyType?: string;
+  raw: Record<string, unknown>;
+};
+
+/**
+ * Verify an API key by hitting `/v1/me` and return a short human label
+ * (email, name, or team display) to show in the UI. If Cursor's response
+ * shape shifts, we fall back to the key type or `"Cursor account"` rather
+ * than fail — the connect step is a UX affordance, not a security boundary.
+ */
+export async function getCursorAccount(apiKey: string): Promise<CursorAccount> {
+  const payload = (await cursorFetch(apiKey, "/v1/me")) as Record<string, unknown> | null;
+  const record = payload ?? {};
+  const email = typeof record.email === "string" ? record.email : undefined;
+  const name = typeof record.name === "string" ? record.name : undefined;
+  const userEmail =
+    email ||
+    (typeof (record.user as Record<string, unknown> | undefined)?.email === "string"
+      ? String((record.user as Record<string, unknown>).email)
+      : undefined);
+  const teamName =
+    typeof (record.team as Record<string, unknown> | undefined)?.name === "string"
+      ? String((record.team as Record<string, unknown>).name)
+      : undefined;
+  const keyType = typeof record.type === "string" ? record.type : typeof record.keyType === "string" ? record.keyType : undefined;
+  const label = userEmail || name || teamName || (keyType ? `${keyType} key` : "Cursor account");
+  return { label, keyType, raw: record };
+}
+
 /** Best-effort human-facing URL for the Cursor agent viewer. */
 export function cursorAgentUrl(agentId: string): string {
   return `https://cursor.com/agents/${encodeURIComponent(agentId)}`;

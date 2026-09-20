@@ -312,6 +312,8 @@ export type GitHubRepoSummary = {
 export type BuildConfig = {
   organizationId: string;
   cursorApiKeySet: boolean;
+  cursorAccountLabel?: string;
+  cursorConnectedAt?: string;
   repoFullName?: string;
   repoUrl?: string;
   branch?: string;
