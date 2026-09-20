@@ -191,7 +191,7 @@ export function NowTab({ ctx }: { ctx: DashCtx }) {
               </ol>
             )}
           </Panel>
-          {organization.hiringRoles.length > 0 ? (
+          {(organization.hiringRoles ?? []).length > 0 ? (
             <p className="px-1 text-xs text-[#928c97]">
               Hiring shortlist is on{" "}
               <button type="button" onClick={() => goTo("work", "hiring")} className="text-[#c2b8ff] underline-offset-4 hover:underline">

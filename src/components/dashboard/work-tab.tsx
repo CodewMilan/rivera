@@ -114,7 +114,7 @@ export function WorkTab({ ctx }: { ctx: DashCtx }) {
         <HiringShortlistPanel
           organizationId={organizationId}
           goal={organization.goal}
-          roles={organization.hiringRoles}
+          roles={organization.hiringRoles ?? []}
           busy={busy}
           onBusy={setBusy}
           onError={setError}

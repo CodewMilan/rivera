@@ -1,17 +1,7 @@
 "use client";
 
-/* ─────────────────────────────────────────────────────────
- * PAGE CONTENT STORYBOARD
- *
- * Static chrome (site header, tab bar) never re-animates.
- * Snapshot polls every 2s — only first paint is choreographed.
- *
- *    0ms   header + primary actions visible
- *  120ms   status strip slides up
- *  280ms   tab panels fade in
- * ───────────────────────────────────────────────────────── */
+/* Static shell: header, stats, and tabs stay visible. No mount fade. */
 
-import { motion, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LaunchTab } from "@/components/dashboard/launch-tab";
@@ -25,6 +15,7 @@ import {
   PHASE_STEPS,
   attentionCount,
   deadlineLabel,
+  normalizeSnapshot,
   parseDashboardHash,
   phaseStepIndex,
   resolveDashboard,
@@ -37,17 +28,6 @@ import type { OrganizationSnapshot } from "@/types";
 export type { DashboardEntry, DashboardTab };
 
 const launchingOrgs = new Set<string>();
-
-const TIMING = {
-  header: 0,
-  status: 0.12,
-  tabs: 0.22,
-};
-
-const ENTER = {
-  offsetY: 10,
-  spring: { type: "spring" as const, stiffness: 350, damping: 30 },
-};
 
 const TAB_META: Record<DashboardTab, { label: string; hint: string }> = {
   now: { label: "Now", hint: "Status, your queue, live team" },
@@ -65,9 +45,10 @@ export function OrgDashboard({
   initialSnapshot?: OrganizationSnapshot | null;
 }) {
   const router = useRouter();
-  const reduce = useReducedMotion();
   const resolved = resolveDashboard(initialTab);
-  const [snapshot, setSnapshot] = useState<OrganizationSnapshot | null>(initialSnapshot);
+  const [snapshot, setSnapshot] = useState<OrganizationSnapshot | null>(
+    initialSnapshot ? normalizeSnapshot(initialSnapshot) : null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<DashboardTab>(resolved.tab);
   const [busy, setBusy] = useState<string | null>(null);
@@ -80,7 +61,7 @@ export function OrgDashboard({
         setError(data.error ?? "Could not load organization");
         return;
       }
-      setSnapshot(data);
+      setSnapshot(normalizeSnapshot(data));
       setError(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not load organization");
@@ -144,7 +125,13 @@ export function OrgDashboard({
     setTab(next);
     const hash = focus ?? (next === "now" ? "" : next);
     router.replace(hash ? `${orgHref}#${hash}` : orgHref, { scroll: false });
-    if (focus) window.setTimeout(() => scrollToId(focus), 120);
+    window.setTimeout(() => {
+      if (focus) {
+        scrollToId(focus);
+        return;
+      }
+      document.getElementById("org-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
   }
 
   const ctx: DashCtx | null = snapshot
@@ -183,14 +170,10 @@ export function OrgDashboard({
     organization.budgetCents === 0 ? 0 : Math.min(100, (organization.budgetUsedCents / organization.budgetCents) * 100);
   const stepIndex = phaseStepIndex(run?.status);
   const failed = run?.status === "failed" || run?.status === "cancelled";
-  const motionOff = Boolean(reduce);
 
   return (
     <div className="space-y-6">
-      <motion.header
-        initial={motionOff ? false : { opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={ENTER.spring}
+      <header
         className="flex flex-col gap-5 border-b border-white/10 pb-6 md:flex-row md:items-end md:justify-between"
       >
         <div className="min-w-0">
@@ -214,14 +197,9 @@ export function OrgDashboard({
             </button>
           ) : null}
         </div>
-      </motion.header>
+      </header>
 
-      <motion.div
-        initial={motionOff ? false : { opacity: 0, y: ENTER.offsetY }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ ...ENTER.spring, delay: TIMING.status }}
-        className="space-y-4"
-      >
+      <div className="space-y-4">
         <PhaseRail active={stepIndex} failed={failed} />
         <div className="grid gap-3 sm:grid-cols-3">
           <Stat
@@ -233,7 +211,7 @@ export function OrgDashboard({
               </div>
             }
           />
-          <Stat label="Remaining" value={money(remaining)} detail={<p className="mt-2 text-xs text-[#928c97]">{deadlineLabel(organization.deadline)}</p>} />
+          <Stat label="Remaining" value={money(remaining)} detail={<p className="mt-2 text-xs text-[#928c97]" suppressHydrationWarning>{deadlineLabel(organization.deadline)}</p>} />
           <Stat
             label="Waiting on you"
             value={pendingCount === 0 ? "None" : String(pendingCount)}
@@ -244,9 +222,9 @@ export function OrgDashboard({
             }
           />
         </div>
-      </motion.div>
+      </div>
 
-      <div className="sticky top-0 z-20 -mx-2 bg-[#0c0a10]/85 px-2 py-3 backdrop-blur-md">
+      <div id="org-tabs" className="sticky top-0 z-20 -mx-2 scroll-mt-4 bg-[#0c0a10]/85 px-2 py-3 backdrop-blur-md">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div
             role="tablist"
@@ -298,11 +276,7 @@ export function OrgDashboard({
         </p>
       ) : null}
 
-      <motion.div
-        initial={motionOff ? false : { opacity: 0, y: ENTER.offsetY }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ ...ENTER.spring, delay: TIMING.tabs }}
-      >
+      <div>
         <div role="tabpanel" id="panel-now" aria-labelledby="tab-now" hidden={tab !== "now"}>
           <NowTab ctx={ctx} />
         </div>
@@ -312,7 +286,7 @@ export function OrgDashboard({
         <div role="tabpanel" id="panel-launch" aria-labelledby="tab-launch" hidden={tab !== "launch"}>
           <LaunchTab ctx={ctx} />
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

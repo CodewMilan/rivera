@@ -84,16 +84,40 @@ export function deadlineLabel(deadline: string): string {
 }
 
 export function attentionItems(snapshot: OrganizationSnapshot) {
-  const blocked = snapshot.tasks.filter((task) => task.status === "blocked" || task.status === "approval_required");
-  const pending = snapshot.approvals.filter((item) => item.status === "pending");
-  const review = snapshot.contentItems.filter((item) => item.status === "review" || item.status === "draft");
-  const openDecisions = snapshot.decisions.filter((item) => item.status === "open");
+  const blocked = (snapshot.tasks ?? []).filter((task) => task.status === "blocked" || task.status === "approval_required");
+  const pending = (snapshot.approvals ?? []).filter((item) => item.status === "pending");
+  const review = (snapshot.contentItems ?? []).filter((item) => item.status === "review" || item.status === "draft");
+  const openDecisions = (snapshot.decisions ?? []).filter((item) => item.status === "open");
   return { blocked, pending, review, openDecisions };
 }
 
 export function attentionCount(snapshot: OrganizationSnapshot): number {
   const items = attentionItems(snapshot);
   return items.blocked.length + items.pending.length + items.review.length + items.openDecisions.length;
+}
+
+export function normalizeSnapshot(snapshot: OrganizationSnapshot): OrganizationSnapshot {
+  return {
+    ...snapshot,
+    organization: {
+      ...snapshot.organization,
+      hiringRoles: snapshot.organization.hiringRoles ?? [],
+      preferredChannels: snapshot.organization.preferredChannels ?? [],
+    },
+    agents: snapshot.agents ?? [],
+    tasks: snapshot.tasks ?? [],
+    events: snapshot.events ?? [],
+    decisions: snapshot.decisions ?? [],
+    approvals: snapshot.approvals ?? [],
+    campaigns: snapshot.campaigns ?? [],
+    contentItems: snapshot.contentItems ?? [],
+    mediaJobs: snapshot.mediaJobs ?? [],
+    assets: snapshot.assets ?? [],
+    inboxMessages: snapshot.inboxMessages ?? [],
+    builds: snapshot.builds ?? [],
+    gmail: snapshot.gmail ?? { configured: false, connected: false },
+    github: snapshot.github ?? { configured: false, connected: false },
+  };
 }
 
 export const AGENT_META: Record<AgentType, { label: string; hint: string }> = {

@@ -21,7 +21,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
   return (
     <div className="relative min-h-screen bg-[#0c0a10] text-[#f4f2f0]">
       {auth || app ? null : <AlertBanner />}
-      <div className="relative overflow-hidden">
+      <div className={app ? "relative" : "relative overflow-hidden"}>
         {app ? null : <StarField />}
         <SiteHeader />
         {children}
