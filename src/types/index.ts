@@ -85,6 +85,7 @@ export type Organization = {
   deadline: string;
   status: OrganizationStatus;
   createdAt: string;
+  ownerUserId?: string;
 };
 
 export type Agent = {

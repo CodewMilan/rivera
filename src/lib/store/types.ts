@@ -26,6 +26,7 @@ export interface Store {
   createRun(run: Run): Promise<Run>;
   getRun(id: string): Promise<Run | undefined>;
   getLatestRun(organizationId: string): Promise<Run | undefined>;
+  listRuns(organizationId: string): Promise<Run[]>;
   updateRun(id: string, patch: Partial<Run>): Promise<Run>;
 
   createAgent(agent: Agent): Promise<Agent>;

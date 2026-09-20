@@ -70,10 +70,14 @@ export function createMemoryStore(): Store {
       return run ? clone(run) : undefined;
     },
     async getLatestRun(organizationId) {
-      const matches = [...runs.values()]
+      const matches = await this.listRuns(organizationId);
+      return matches[0];
+    },
+    async listRuns(organizationId) {
+      return [...runs.values()]
         .filter((run) => run.organizationId === organizationId)
-        .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
-      return matches[0] ? clone(matches[0]) : undefined;
+        .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+        .map(clone);
     },
     async updateRun(id, patch) {
       const current = requireEntity(runs.get(id), "Run");

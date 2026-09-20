@@ -9,6 +9,7 @@ import type { Organization } from "@/types";
 export async function createOrganizationFromIntake(
   store: Store,
   input: IntakeInput,
+  options?: { ownerUserId?: string },
 ): Promise<Organization> {
   const organization = await store.createOrganization({
     id: createId(),
@@ -25,6 +26,7 @@ export async function createOrganizationFromIntake(
     deadline: new Date(input.deadline).toISOString(),
     status: "active",
     createdAt: nowIso(),
+    ownerUserId: options?.ownerUserId,
   });
 
   await appendEvent(store, {

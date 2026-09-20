@@ -1,21 +1,194 @@
+"use client";
+
+import Link from "next/link";
+import { Show, useUser } from "@clerk/nextjs";
+import { useEffect, useState } from "react";
 import { RiveraMark } from "@/components/site/rivera-mark";
+import type { HomeOverview } from "@/lib/home/overview";
 
 export function HeroDashboard() {
+  return (
+    <>
+      <Show when="signed-out">
+        <DashboardCard view={STOCK_VIEW} />
+      </Show>
+      <Show when="signed-in">
+        <LiveHeroDashboard />
+      </Show>
+    </>
+  );
+}
+
+function LiveHeroDashboard() {
+  const { user } = useUser();
+  const [overview, setOverview] = useState<HomeOverview | null>(null);
+  const [orgId, setOrgId] = useState<string | undefined>();
+
+  async function load(nextOrgId?: string) {
+    const query = nextOrgId ? `?orgId=${encodeURIComponent(nextOrgId)}` : "";
+    const response = await fetch(`/api/home/overview${query}`, { cache: "no-store" });
+    const data = (await response.json()) as HomeOverview;
+    setOverview(data);
+    if (data.selected?.id) setOrgId(data.selected.id);
+  }
+
+  useEffect(() => {
+    void load(orgId);
+    const timer = window.setInterval(() => void load(orgId), 4000);
+    return () => window.clearInterval(timer);
+  }, [orgId]);
+
+  const initial =
+    user?.firstName?.[0] ||
+    user?.username?.[0] ||
+    user?.primaryEmailAddress?.emailAddress?.[0] ||
+    "R";
+
+  if (!overview) {
+    return (
+      <DashboardCard
+        view={{
+          orgSlug: "loading",
+          orgName: "Loading organization",
+          initial: initial.toUpperCase(),
+          orgHref: "#intake",
+          metrics: { tasksThisWeek: "—", successRate: "—", avgRunTime: "—" },
+          agents: [],
+          runs: [],
+          agentNames: [],
+        }}
+        loading
+      />
+    );
+  }
+
+  return (
+    <DashboardCard
+      view={viewFromOverview(overview, initial.toUpperCase())}
+      onSelectOrg={(id) => {
+        setOrgId(id);
+        void load(id);
+      }}
+    />
+  );
+}
+
+function viewFromOverview(overview: HomeOverview, initial: string): DashboardView {
+  const selected = overview.selected;
+  if (!selected) {
+    return {
+      orgSlug: "no-org",
+      orgName: "Create an org",
+      initial,
+      orgHref: "#intake",
+      metrics: {
+        tasksThisWeek: "0",
+        successRate: "—",
+        avgRunTime: "—",
+      },
+      agents: [],
+      runs: [],
+      agentNames: [],
+      organizations: overview.organizations,
+      selectedId: undefined,
+      emptyLabel: "Start a run above. Agents, tasks, and live stats will land here.",
+    };
+  }
+  return {
+    orgSlug: selected.slug,
+    orgName: `${selected.slug} / ${selected.phase}`,
+    initial,
+    orgHref: `/organizations/${selected.id}`,
+    metrics: {
+      tasksThisWeek: String(selected.metrics.tasksThisWeek),
+      successRate: selected.metrics.taskSuccessRate,
+      avgRunTime: selected.metrics.avgRunTime,
+    },
+    agents: selected.agents,
+    runs: selected.runs,
+    agentNames: selected.agentNames.slice(0, 4),
+    organizations: overview.organizations,
+    selectedId: selected.id,
+  };
+}
+
+type DashboardView = {
+  orgSlug: string;
+  orgName: string;
+  initial: string;
+  orgHref: string;
+  metrics: { tasksThisWeek: string; successRate: string; avgRunTime: string; deltas?: [string, string, string] };
+  agents: Array<{ id?: string; name: string; status: string; when: string; detail: string }>;
+  runs: Array<{ id?: string; href: string; title: string; extra: string; status: string; when: string; detail: string }>;
+  agentNames: string[];
+  organizations?: Array<{ id: string; name: string; slug: string }>;
+  selectedId?: string;
+  emptyLabel?: string;
+};
+
+const STOCK_VIEW: DashboardView = {
+  orgSlug: "rivera-org",
+  orgName: "rivera / launch-org",
+  initial: "R",
+  orgHref: "#intake",
+  metrics: {
+    tasksThisWeek: "21",
+    successRate: "81%",
+    avgRunTime: "9m 21s",
+    deltas: ["+3%", "+16%", "+5%"],
+  },
+  agents: [
+    { name: "CEO", status: "Successful", when: "12m ago", detail: "plan" },
+    { name: "Research", status: "Successful", when: "12m ago", detail: "market-map" },
+  ],
+  runs: [
+    { href: "#intake", title: "research / market-map", extra: "main", status: "Successful", when: "12m ago", detail: "preview" },
+    { href: "#intake", title: "social / launch-review", extra: "campaign", status: "Successful", when: "12m ago", detail: "preview" },
+  ],
+  agentNames: ["ceo", "research"],
+};
+
+function DashboardCard({
+  view,
+  loading = false,
+  onSelectOrg,
+}: {
+  view: DashboardView;
+  loading?: boolean;
+  onSelectOrg?: (id: string) => void;
+}) {
   return (
     <div className="overflow-hidden rounded-[20px] bg-[#0e0c12] px-8 py-7 shadow-[0px_0px_16px_4px_rgba(194,184,255,0.08)]">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <RiveraMark compact />
-          <button type="button" className="flex items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-1 text-[12px] text-[#f4f2f0]">
-            <span className="size-2 rounded-full bg-[#6a53fe]" />
-            rivera-org
-            <span className="text-[#928c97]">▾</span>
-          </button>
+          {view.organizations && view.organizations.length > 0 ? (
+            <label className="flex items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-1 text-[12px] text-[#f4f2f0]">
+              <span className="size-2 rounded-full bg-[#6a53fe]" />
+              <select
+                value={view.selectedId ?? view.organizations[0]?.id}
+                onChange={(event) => onSelectOrg?.(event.target.value)}
+                className="max-w-[180px] bg-transparent text-[12px] text-[#f4f2f0] outline-none"
+                aria-label="Organization"
+              >
+                {view.organizations.map((org) => (
+                  <option key={org.id} value={org.id} className="bg-[#0e0c12] text-[#f4f2f0]">
+                    {org.slug}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <span className="flex items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-1 text-[12px] text-[#f4f2f0]">
+              <span className="size-2 rounded-full bg-[#6a53fe]" />
+              {view.orgSlug}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-4 text-[13px] text-[#928c97]">
           Docs
           <span className="flex size-7 items-center justify-center rounded-full bg-[#c2b8ff] text-[11px] font-medium text-[#221d2a]">
-            R
+            {view.initial}
           </span>
         </div>
       </div>
@@ -24,40 +197,62 @@ export function HeroDashboard() {
         {["Overview", "Review", "Production", "Agents", "Settings"].map((tab, index) => (
           <span
             key={tab}
-            className={
-              index === 0
-                ? "-mb-px border-b border-[#f4f2f0] pb-3 text-[#f4f2f0]"
-                : "pb-3"
-            }
+            className={index === 0 ? "-mb-px border-b border-[#f4f2f0] pb-3 text-[#f4f2f0]" : "pb-3"}
           >
             {tab}
           </span>
         ))}
       </div>
 
-      <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <div className={`mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_280px] ${loading ? "animate-pulse" : ""}`}>
         <div>
           <h3 className="text-[40px] font-normal leading-none tracking-[-1.2px] text-[#f4f2f0]">Overview</h3>
           <div className="mt-8 grid grid-cols-3 gap-8 text-[13px] text-[#928c97]">
-            <Metric label="Tasks this week" value="21" delta="+3%" />
-            <Metric label="Task success rate" value="81%" delta="+16%" />
-            <Metric label="Avg. run time" value="9m 21s" delta="+5%" down />
+            <Metric label="Tasks this week" value={view.metrics.tasksThisWeek} delta={view.metrics.deltas?.[0]} />
+            <Metric label="Task success rate" value={view.metrics.successRate} delta={view.metrics.deltas?.[1]} />
+            <Metric label="Avg. run time" value={view.metrics.avgRunTime} delta={view.metrics.deltas?.[2]} down={Boolean(view.metrics.deltas)} />
           </div>
 
           <SectionTitle>Starred agents</SectionTitle>
-          <div className="divide-y divide-white/6">
-            <AgentRow name="CEO" status="Successful" when="12 ago" commit="8f3ae753 · abh6cdd" />
-            <AgentRow name="Research" status="Successful" when="12 ago" commit="fv3Ersf2 · 9dsad3e" />
-          </div>
+          {view.agents.length === 0 ? (
+            <p className="py-3 text-[13px] text-[#928c97]">{view.emptyLabel ?? "No agents yet. Launch a run to staff the org."}</p>
+          ) : (
+            <div className="divide-y divide-white/6">
+              {view.agents.map((agent) => (
+                <AgentRow
+                  key={agent.id ?? agent.name}
+                  name={agent.name}
+                  status={agent.status}
+                  when={agent.when}
+                  detail={agent.detail}
+                />
+              ))}
+            </div>
+          )}
 
           <div className="mt-8 flex items-center justify-between">
             <SectionTitle className="mt-0">Live runs</SectionTitle>
-            <span className="text-[13px] text-[#928c97]">View features →</span>
+            <Link href={view.orgHref} className="text-[13px] text-[#928c97]">
+              {view.selectedId ? "Open org →" : "Start a run →"}
+            </Link>
           </div>
-          <div className="divide-y divide-white/6">
-            <RunRow href="research / market-map" extra="main" commit="01Yhssed · vds8dsj" />
-            <RunRow href="social / launch-review" extra="campaign" commit="w23Ese0 · m1lk9es" />
-          </div>
+          {view.runs.length === 0 ? (
+            <p className="py-3 text-[13px] text-[#928c97]">No runs yet.</p>
+          ) : (
+            <div className="divide-y divide-white/6">
+              {view.runs.map((run) => (
+                <RunRow
+                  key={run.id ?? run.title}
+                  href={run.href}
+                  title={run.title}
+                  extra={run.extra}
+                  status={run.status}
+                  when={run.when}
+                  detail={run.detail}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         <aside>
@@ -72,10 +267,17 @@ export function HeroDashboard() {
             </div>
           </div>
           <p className="mt-6 text-[11px] tracking-[0.14em] text-[#928c97]">ORGANIZATION</p>
-          <p className="mt-2 text-[13px] text-[#f4f2f0]">rivera / launch-org</p>
+          <p className="mt-2 text-[13px] text-[#f4f2f0]">{view.orgName}</p>
           <p className="mt-6 text-[11px] tracking-[0.14em] text-[#928c97]">AGENTS</p>
-          <p className="mt-2 text-[13px] text-[#f4f2f0]">ceo</p>
-          <p className="mt-1 text-[13px] text-[#f4f2f0]">research</p>
+          {view.agentNames.length === 0 ? (
+            <p className="mt-2 text-[13px] text-[#928c97]">—</p>
+          ) : (
+            view.agentNames.map((name) => (
+              <p key={name} className="mt-1 text-[13px] text-[#f4f2f0] first:mt-2">
+                {name}
+              </p>
+            ))
+          )}
         </aside>
       </div>
     </div>
@@ -280,7 +482,7 @@ function Metric({
 }: {
   label: string;
   value: string;
-  delta: string;
+  delta?: string;
   down?: boolean;
 }) {
   return (
@@ -288,7 +490,7 @@ function Metric({
       <p>{label}</p>
       <p className="mt-2 text-[28px] leading-none tracking-[-0.6px] text-[#f4f2f0]">
         {value}{" "}
-        <span className={`text-[13px] ${down ? "text-[#e08a7d]" : "text-[#7dcea0]"}`}>{delta}</span>
+        {delta ? <span className={`text-[13px] ${down ? "text-[#e08a7d]" : "text-[#7dcea0]"}`}>{delta}</span> : null}
       </p>
     </div>
   );
@@ -302,13 +504,14 @@ function AgentRow({
   name,
   status,
   when,
-  commit,
+  detail,
 }: {
   name: string;
   status: string;
   when: string;
-  commit: string;
+  detail: string;
 }) {
+  const failed = status === "Failed";
   return (
     <div className="flex items-center justify-between py-3 text-[13px]">
       <span className="flex items-center gap-3 text-[#f4f2f0]">
@@ -317,30 +520,45 @@ function AgentRow({
       </span>
       <span className="flex items-center gap-6 text-[#928c97]">
         <span className="flex items-center gap-2 text-[#f4f2f0]">
-          <span className="size-1.5 rounded-full bg-[#7dcea0]" />
+          <span className={`size-1.5 rounded-full ${failed ? "bg-[#e08a7d]" : "bg-[#7dcea0]"}`} />
           {status} {when}
         </span>
-        <span>{commit}</span>
+        <span className="max-w-[180px] truncate">{detail}</span>
       </span>
     </div>
   );
 }
 
-function RunRow({ href, extra, commit }: { href: string; extra: string; commit: string }) {
+function RunRow({
+  href,
+  title,
+  extra,
+  status,
+  when,
+  detail,
+}: {
+  href: string;
+  title: string;
+  extra: string;
+  status: string;
+  when: string;
+  detail: string;
+}) {
+  const failed = status === "Failed";
   return (
-    <div className="flex items-center justify-between py-3 text-[13px]">
+    <Link href={href} className="flex items-center justify-between py-3 text-[13px]">
       <span>
-        <span className="text-[#f4f2f0]">{href} ↗</span>
+        <span className="text-[#f4f2f0]">{title} ↗</span>
         <span className="mt-1 block text-[#928c97]">{extra}</span>
       </span>
       <span className="flex items-center gap-6 text-[#928c97]">
         <span className="flex items-center gap-2 text-[#f4f2f0]">
-          <span className="size-1.5 rounded-full bg-[#7dcea0]" />
-          Successful 12 ago
+          <span className={`size-1.5 rounded-full ${failed ? "bg-[#e08a7d]" : "bg-[#7dcea0]"}`} />
+          {status} {when}
         </span>
-        <span>{commit}</span>
+        <span>{detail}</span>
       </span>
-    </div>
+    </Link>
   );
 }
 

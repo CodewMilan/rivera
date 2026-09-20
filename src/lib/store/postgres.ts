@@ -71,6 +71,14 @@ export function createPostgresStore(sql: Sql): Store {
       `;
       return row(rows);
     },
+    async listRuns(organizationId) {
+      const rows = await sql<{ data: Run }[]>`
+        SELECT data FROM runs
+        WHERE organization_id = ${organizationId}
+        ORDER BY started_at DESC
+      `;
+      return rows.map((item) => item.data);
+    },
     async updateRun(id, patch) {
       const current = await this.getRun(id);
       if (!current) throw new Error("Run not found");
