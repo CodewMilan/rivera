@@ -101,9 +101,19 @@ export function NowTab({ ctx }: { ctx: DashCtx }) {
               </li>
             ))}
             {blocked.map((task) => (
-              <li key={task.id} className="border-t border-white/10 pt-4">
-                <p className="text-sm text-[#f4f2f0]">{task.title}</p>
-                <p className="mt-1 text-xs text-[#928c97]">{task.description}</p>
+              <li
+                key={task.id}
+                className="flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <p className="text-sm text-[#f4f2f0]">{task.title}</p>
+                  <p className="mt-1 text-xs text-[#928c97]">{task.description}</p>
+                </div>
+                {task.title === "Shortlist hires" ? (
+                  <button type="button" onClick={() => goTo("work", "hiring")} className={btnGhost}>
+                    Open shortlist
+                  </button>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -191,7 +201,7 @@ export function NowTab({ ctx }: { ctx: DashCtx }) {
               </ol>
             )}
           </Panel>
-          {(organization.hiringRoles ?? []).length > 0 ? (
+          {(organization.hiringRoles ?? []).length > 0 || snapshot.tasks.some((task) => task.title === "Shortlist hires") ? (
             <p className="px-1 text-xs text-[#928c97]">
               Hiring shortlist is on{" "}
               <button type="button" onClick={() => goTo("work", "hiring")} className="text-[#c2b8ff] underline-offset-4 hover:underline">

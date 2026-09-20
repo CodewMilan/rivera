@@ -1,8 +1,9 @@
 import { ceoPlanSchema, launchPostsSchema } from "@/lib/agents/schema";
 import { nowIso } from "@/lib/clock";
 import { AGENT_ROSTER, FOUNDER_AGENTS, FOUNDER_TASKS, demoCeoPlan, demoContentItems, demoSpecialistOutput } from "@/lib/demo/fixtures";
-import { appendEvent } from "@/lib/events/log";
+import { suggestHiringRoles } from "@/lib/intake/roles";
 import { assembleReport, evaluateAgentOutput, rejectIfOverBudget } from "@/lib/evaluation/report";
+import { appendEvent } from "@/lib/events/log";
 import { syncGmailInbox } from "@/lib/gmail/sync";
 import { createId } from "@/lib/ids";
 import { settleMediaJob } from "@/lib/media/jobs";
@@ -221,7 +222,7 @@ async function searchCompetitorSources(deps: OrchestratorDeps, org: Organization
 }
 
 async function searchHiringSources(deps: OrchestratorDeps, org: Organization, run: Run) {
-  const roles = org.hiringRoles;
+  const roles = org.hiringRoles ?? [];
   const domainHint = org.technology || org.domain || org.goal;
   const findings: unknown[] = [];
   for (const role of roles) {
@@ -443,6 +444,85 @@ async function runTypedTasks(
     run = result.run;
   }
   return { org, run };
+}
+
+async function ensureHiringStaffed(deps: OrchestratorDeps, org: Organization, run: Run) {
+  const roster = AGENT_ROSTER.find((item) => item.type === "hiring");
+  if (!roster) throw new Error("Hiring agent is missing from the roster");
+
+  const agents = await deps.store.listAgents(org.id);
+  let agent = agents.find((item) => item.type === "hiring");
+  if (!agent) {
+    agent = await deps.store.createAgent({
+      id: createId(),
+      organizationId: org.id,
+      type: "hiring",
+      name: roster.name,
+      objective: roster.objective,
+      tools: roster.tools,
+      permissions: ["draft"],
+      budgetCents: Math.round(org.budgetCents * 0.1),
+      spentCents: 0,
+      status: "idle",
+    });
+    await appendEvent(deps.store, {
+      organizationId: org.id,
+      runId: run.id,
+      type: "agent.created",
+      summary: `Activated ${agent.name}`,
+      payload: { agentId: agent.id, type: agent.type },
+    });
+  }
+
+  const tasks = await deps.store.listTasksByRun(run.id);
+  let task = tasks.find((item) => item.agentId === agent.id) ?? tasks.find((item) => item.title === "Shortlist hires");
+  if (!task) {
+    const spec = FOUNDER_TASKS.find((item) => item.agentType === "hiring");
+    const wedge = tasks.find((item) => /wedge/i.test(item.title));
+    const waiting = Boolean(wedge && wedge.status !== "done");
+    task = await deps.store.createTask({
+      id: createId(),
+      organizationId: org.id,
+      runId: run.id,
+      agentId: agent.id,
+      title: spec?.title ?? "Shortlist hires",
+      description: spec?.description ?? "Find public LinkedIn profiles for the roles the founder needs.",
+      dependencies: waiting && wedge ? [wedge.id] : [],
+      status: waiting ? "blocked" : "todo",
+      input: { goal: org.goal },
+      estimatedCostCents: spec?.estimatedCostCents ?? 20,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    });
+    await appendEvent(deps.store, {
+      organizationId: org.id,
+      runId: run.id,
+      type: "task.assigned",
+      summary: `Assigned ${task.title} to hiring`,
+      payload: { taskId: task.id, agentType: "hiring" },
+    });
+  }
+
+  return { agent, task };
+}
+
+export async function runHiringForOrganization(deps: OrchestratorDeps, organizationId: string) {
+  let org = await deps.store.getOrganization(organizationId);
+  if (!org) throw new Error("Organization not found");
+  if ((org.hiringRoles ?? []).length === 0) {
+    org = await deps.store.updateOrganization(org.id, {
+      hiringRoles: suggestHiringRoles(org.goal),
+    });
+  }
+
+  const run = await deps.store.getLatestRun(org.id);
+  if (!run || run.cancelled) return { org, run };
+
+  const { task } = await ensureHiringStaffed(deps, org, run);
+  if (task.status === "done") return { org, run };
+
+  const hiringHits = await searchHiringSources(deps, org, run);
+  return executeAgentTask(deps, org, run, task, "hiring", hiringHits);
 }
 
 async function createDecision(deps: OrchestratorDeps, org: Organization, run: Run) {
@@ -802,14 +882,17 @@ export async function runOrganization(runId: string, deps: OrchestratorDeps): Pr
         org = result.org;
         run = result.run;
 
-        if (org.hiringRoles.length > 0) {
-          const hiringHits = await searchHiringSources(deps, org, run);
-          const hiringResult = await runTypedTasks(deps, org, run, ["hiring"], {
-            hiring: hiringHits,
+        if ((org.hiringRoles ?? []).length === 0) {
+          org = await deps.store.updateOrganization(org.id, {
+            hiringRoles: suggestHiringRoles(org.goal),
           });
-          org = hiringResult.org;
-          run = hiringResult.run;
         }
+        const hiringHits = await searchHiringSources(deps, org, run);
+        const hiringResult = await runTypedTasks(deps, org, run, ["hiring"], {
+          hiring: hiringHits,
+        });
+        org = hiringResult.org;
+        run = hiringResult.run;
         run = await transition(deps.store, run, "debate");
         break;
       }

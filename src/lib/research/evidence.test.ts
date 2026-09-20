@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evidenceFromEvents, toolMetricsFromEvents } from "./evidence";
+import { evidenceFromEvents, hiringCandidatesFromEvents, toolMetricsFromEvents } from "./evidence";
 
 describe("phase 3 evidence", () => {
   it("dedupes search and GitHub URLs from tool events", () => {
@@ -29,6 +29,31 @@ describe("phase 3 evidence", () => {
     ]);
     expect(links).toHaveLength(2);
     expect(links.map((item) => item.source)).toEqual(["webSearch", "github"]);
+  });
+
+  it("keeps LinkedIn shortlist hits out of research evidence", () => {
+    const event = {
+      id: "3",
+      organizationId: "org",
+      type: "tool.called" as const,
+      summary: "hiring search returned 1 candidates for Founding Engineer",
+      payload: {
+        tool: "webSearch",
+        role: "Founding Engineer",
+        query: 'site:linkedin.com/in "Founding Engineer"',
+        results: [{ title: "Amina Okonkwo", url: "https://www.linkedin.com/in/amina-okonkwo-demo" }],
+      },
+      createdAt: "2026-09-19T00:00:02.000Z",
+    };
+    expect(evidenceFromEvents([event])).toEqual([]);
+    expect(hiringCandidatesFromEvents([event])).toEqual([
+      {
+        role: "Founding Engineer",
+        title: "Amina Okonkwo",
+        url: "https://www.linkedin.com/in/amina-okonkwo-demo",
+        snippet: undefined,
+      },
+    ]);
   });
 
   it("keeps calculator metrics even without URLs", () => {

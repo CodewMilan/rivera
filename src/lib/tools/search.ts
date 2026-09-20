@@ -23,14 +23,26 @@ export const recordedSearchFixtures: Record<string, SearchResult[]> = {
         "Engineers want a 30-second loop from invoke to decoded events, footprints, and auth without a hosted stack.",
     },
   ],
+  linkedin: [
+    {
+      title: "Amina Okonkwo — Founding Engineer",
+      url: "https://www.linkedin.com/in/amina-okonkwo-demo",
+      snippet: "Shipped developer tools at seed-stage companies. Open to a founding engineering seat.",
+    },
+    {
+      title: "Luis Ferreira — Full-stack Engineer",
+      url: "https://www.linkedin.com/in/luis-ferreira-demo",
+      snippet: "Next.js and TypeScript. Built 0→1 product surfaces and wants an early-stage role.",
+    },
+  ],
 };
 
 export class FakeSearchProvider implements ResearchProvider {
   async search(query: string): Promise<SearchResult[]> {
-    const key = query.toLowerCase().includes("stellar") || query.toLowerCase().includes("soroban")
-      ? "stellar"
-      : "stellar";
-    return recordedSearchFixtures[key];
+    if (query.toLowerCase().includes("linkedin.com")) {
+      return recordedSearchFixtures.linkedin;
+    }
+    return recordedSearchFixtures.stellar;
   }
 }
 

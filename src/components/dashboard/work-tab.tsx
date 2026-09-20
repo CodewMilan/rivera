@@ -115,6 +115,8 @@ export function WorkTab({ ctx }: { ctx: DashCtx }) {
           organizationId={organizationId}
           goal={organization.goal}
           roles={organization.hiringRoles ?? []}
+          events={events}
+          hiringTask={tasks.find((task) => task.title === "Shortlist hires")}
           busy={busy}
           onBusy={setBusy}
           onError={setError}

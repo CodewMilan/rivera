@@ -1,7 +1,11 @@
 import { errorJson, json, readJson } from "@/lib/http/json";
 import { requireOrgAccess } from "@/lib/auth/org-guard";
+import { runHiringForOrganization } from "@/lib/orchestration/run";
+import { getRuntime } from "@/lib/runtime";
 import { getStore } from "@/lib/store";
 import { z } from "zod";
+
+export const maxDuration = 120;
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
@@ -32,6 +36,15 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   const organization = await access.store.updateOrganization(id, {
     hiringRoles: parsed.data.hiringRoles,
   });
-  return json({ organization });
+  if (parsed.data.hiringRoles.length > 0) {
+    try {
+      const runtime = await getRuntime();
+      await runHiringForOrganization(runtime, id);
+    } catch {
+      // Roles are saved even if the search can't run yet (wedge still open, no hiring agent).
+    }
+  }
+  const next = (await access.store.getOrganization(id)) ?? organization;
+  return json({ organization: next });
 }
 

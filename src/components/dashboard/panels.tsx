@@ -5,7 +5,12 @@ import { Empty, Panel, btnGhost, btnPrimary, btnQuiet } from "@/components/dashb
 import { StatusBadge } from "@/components/status-badge";
 import { cn } from "@/lib/cn";
 import { HIRING_ROLE_PRESETS, suggestHiringRoles } from "@/lib/intake/roles";
-import type { OrganizationSnapshot } from "@/types";
+import {
+  hiringCandidatesFromEvents,
+  hiringCandidatesFromTask,
+  mergeHiringCandidates,
+} from "@/lib/research/evidence";
+import type { EventRecord, OrganizationSnapshot, Task } from "@/types";
 
 export function InboxPanel({
   organizationId,
@@ -81,6 +86,8 @@ export function HiringShortlistPanel({
   organizationId,
   goal,
   roles,
+  events,
+  hiringTask,
   busy,
   onBusy,
   onError,
@@ -89,18 +96,23 @@ export function HiringShortlistPanel({
   organizationId: string;
   goal: string;
   roles: string[];
+  events: EventRecord[];
+  hiringTask?: Task;
   busy: string | null;
   onBusy: (value: string | null) => void;
   onError: (value: string | null) => void;
   onSaved: () => void | Promise<void>;
 }) {
-  const [open, setOpen] = useState(roles.length > 0);
-  const [selected, setSelected] = useState<string[]>(roles);
+  const [open, setOpen] = useState(true);
+  const [selected, setSelected] = useState<string[]>(roles.length ? roles : suggestHiringRoles(goal));
+  const candidates = mergeHiringCandidates(hiringCandidatesFromEvents(events), hiringCandidatesFromTask(hiringTask));
+  const status = hiringTask?.status;
+  const searching = busy === "hiring-roles" || status === "in_progress";
 
   useEffect(() => {
-    setSelected(roles);
-    if (roles.length > 0) setOpen(true);
-  }, [roles]);
+    setSelected(roles.length ? roles : suggestHiringRoles(goal));
+    setOpen(true);
+  }, [roles, goal]);
 
   function toggle(role: string) {
     setSelected((current) => (current.includes(role) ? current.filter((item) => item !== role) : [...current, role]));
@@ -125,21 +137,51 @@ export function HiringShortlistPanel({
   return (
     <Panel
       id="hiring"
-      eyebrow="Optional"
-      title="Hiring shortlist"
+      eyebrow="Hiring"
+      title="Candidate shortlist"
       action={
-        <button type="button" onClick={() => setOpen((value) => !value)} className={btnGhost}>
-          {open ? "Hide" : roles.length ? "Edit" : "Set roles"}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {status ? <HiringStatusBadge status={status} searching={searching} /> : null}
+          <button type="button" onClick={() => setOpen((value) => !value)} className={btnGhost}>
+            {open ? "Hide roles" : roles.length ? "Edit roles" : "Set roles"}
+          </button>
+        </div>
       }
     >
-      {roles.length === 0 && !open ? (
-        <Empty label="Leave this off unless you want Rivera to source candidates." />
-      ) : null}
+      {candidates.length > 0 ? (
+        <ul className="space-y-4">
+          {candidates.map((candidate) => (
+            <li key={candidate.url} className="border-t border-white/10 pt-4 first:border-t-0 first:pt-0">
+              <p className="text-[11px] uppercase tracking-[0.06em] text-[#928c97]">{candidate.role}</p>
+              <a
+                href={candidate.url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1 inline-flex min-h-11 items-center text-sm text-[#c2b8ff] underline-offset-4 hover:underline"
+              >
+                {candidate.title}
+              </a>
+              {candidate.snippet ? <p className="mt-1 text-sm leading-6 text-[#928c97]">{candidate.snippet}</p> : null}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <Empty
+          label={
+            searching
+              ? "Searching public LinkedIn profiles…"
+              : status === "blocked"
+                ? "Hiring is waiting on the wedge. After that, Rivera searches public LinkedIn profiles."
+                : "No candidates yet. Pick roles and search public LinkedIn profiles."
+          }
+        />
+      )}
       {open ? (
-        <div className="space-y-4">
+        <div className="mt-4 space-y-4 border-t border-white/10 pt-4">
           <p className="text-sm leading-6 text-[#928c97]">
-            Rivera will not recruit until you pick roles. Suggestions come from the brief if you want a starting point.
+            {roles.length === 0
+              ? "This org never searched candidates. Confirm the roles from the brief (or change them) and save — Rivera will search LinkedIn now."
+              : "Save to run or refresh the shortlist from public LinkedIn profiles."}
           </p>
           <div className="flex flex-wrap gap-2">
             {HIRING_ROLE_PRESETS.map((role) => {
@@ -167,11 +209,19 @@ export function HiringShortlistPanel({
               Suggest from brief
             </button>
             <button type="button" disabled={busy === "hiring-roles"} onClick={() => void save()} className={btnPrimary}>
-              {busy === "hiring-roles" ? "Saving…" : "Save roles"}
+              {busy === "hiring-roles" ? "Searching…" : "Save and search"}
             </button>
           </div>
         </div>
       ) : null}
     </Panel>
   );
+}
+
+function HiringStatusBadge({ status, searching }: { status: Task["status"]; searching: boolean }) {
+  if (searching) return <StatusBadge value="Searching" tone="warn" />;
+  if (status === "done") return <StatusBadge value="Shortlisted" tone="good" />;
+  if (status === "blocked") return <StatusBadge value="Blocked" tone="warn" />;
+  if (status === "failed") return <StatusBadge value="Failed" tone="bad" />;
+  return <StatusBadge value={status.replaceAll("_", " ")} />;
 }

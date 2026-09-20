@@ -4,7 +4,7 @@ import { FakeLLMProvider, defaultDemoResponder } from "@/lib/providers/llm";
 import { FakeHiggsfieldProvider } from "@/lib/providers/higgsfield";
 import { FakeSearchProvider } from "@/lib/tools/search";
 import { createMemoryStore, resetStore } from "@/lib/store";
-import { createAndStartRun, createRun, defaultRunCaps, runOrganization } from "./run";
+import { createAndStartRun, createRun, defaultRunCaps, runHiringForOrganization, runOrganization } from "./run";
 import { nowIso } from "@/lib/clock";
 import { createId } from "@/lib/ids";
 
@@ -180,8 +180,81 @@ describe("phase 3 demo tools", () => {
     const scored = (await store.listTasks(org.id)).filter((task) => task.evaluation?.score);
     expect(scored.length).toBeGreaterThan(0);
 
+    const hiring = (await store.listTasks(org.id)).find((task) => task.title === "Shortlist hires");
+    expect(hiring?.status).toBe("done");
+    expect((await store.getOrganization(org.id))?.hiringRoles?.length).toBeGreaterThan(0);
+    expect((await store.listEvents(org.id)).some((event) => event.summary.includes("candidates"))).toBe(true);
+
     const items = await store.listContentItems(org.id);
     expect(items.some((item) => item.mediaAssetIds.length > 0)).toBe(true);
+  });
+
+  it("finishes a leftover blocked hiring task after the run already completed", async () => {
+    const store = createMemoryStore();
+    const org = await createOrganizationFromIntake(store, intake());
+    const deps = {
+      store,
+      llm: new FakeLLMProvider(defaultDemoResponder),
+      search: new FakeSearchProvider(),
+      media: new FakeHiggsfieldProvider(),
+    };
+    await createAndStartRun(deps, org.id);
+
+    const hiring = (await store.listTasks(org.id)).find((task) => task.title === "Shortlist hires");
+    expect(hiring).toBeTruthy();
+    await store.updateTask(hiring!.id, { status: "blocked", output: undefined });
+    await store.updateOrganization(org.id, { hiringRoles: [] });
+
+    await runHiringForOrganization(deps, org.id);
+
+    const next = (await store.listTasks(org.id)).find((task) => task.title === "Shortlist hires");
+    expect(next?.status).toBe("done");
+    expect((await store.getOrganization(org.id))?.hiringRoles?.length).toBeGreaterThan(0);
+  });
+
+  it("staffs hiring on an older org that never had a hiring agent", async () => {
+    const store = createMemoryStore();
+    const org = await createOrganizationFromIntake(store, intake());
+    const deps = {
+      store,
+      llm: new FakeLLMProvider(defaultDemoResponder),
+      search: new FakeSearchProvider(),
+      media: new FakeHiggsfieldProvider(),
+    };
+    const run = await createRun(deps, org.id);
+    await store.updateRun(run.id, { status: "complete" });
+    const strategy = await store.createAgent({
+      id: createId(),
+      organizationId: org.id,
+      type: "strategy",
+      name: "Strategy",
+      objective: "Choose the wedge",
+      tools: [],
+      permissions: ["draft"],
+      budgetCents: 100,
+      spentCents: 0,
+      status: "idle",
+    });
+    await store.createTask({
+      id: createId(),
+      organizationId: org.id,
+      runId: run.id,
+      agentId: strategy.id,
+      title: "Choose the product wedge",
+      description: "Pick the first user and the go / no-go call.",
+      dependencies: [],
+      status: "done",
+      input: { goal: org.goal },
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    });
+
+    await runHiringForOrganization(deps, org.id);
+
+    expect((await store.listAgents(org.id)).some((agent) => agent.type === "hiring")).toBe(true);
+    const hiring = (await store.listTasks(org.id)).find((task) => task.title === "Shortlist hires");
+    expect(hiring?.status).toBe("done");
+    expect((await store.listEvents(org.id)).some((event) => event.summary.includes("candidates"))).toBe(true);
   });
 });
 

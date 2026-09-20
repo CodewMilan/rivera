@@ -23,11 +23,13 @@ import {
   type DashboardTab,
 } from "@/lib/dashboard";
 import { money, phaseLabel } from "@/lib/format";
+import { suggestHiringRoles } from "@/lib/intake/roles";
 import type { OrganizationSnapshot } from "@/types";
 
 export type { DashboardEntry, DashboardTab };
 
 const launchingOrgs = new Set<string>();
+const hiringKickoffs = new Set<string>();
 
 const TAB_META: Record<DashboardTab, { label: string; hint: string }> = {
   now: { label: "Now", hint: "Status, your queue, live team" },
@@ -118,6 +120,41 @@ export function OrgDashboard({
     launchingOrgs.add(organizationId);
     void act(`/api/organizations/${organizationId}/runs`, "start-run");
   }, [snapshot, organizationId]);
+
+  useEffect(() => {
+    if (!snapshot || hiringKickoffs.has(organizationId) || busy === "hiring-roles") return;
+    const hiringAgent = snapshot.agents.find((agent) => agent.type === "hiring");
+    const hiringTask =
+      snapshot.tasks.find((task) => hiringAgent && task.agentId === hiringAgent.id) ??
+      snapshot.tasks.find((task) => task.title === "Shortlist hires");
+    if (hiringTask?.status === "done" || hiringTask?.status === "in_progress") return;
+    if (!snapshot.run || snapshot.run.cancelled) return;
+    const wedge = snapshot.tasks.find((task) => /wedge/i.test(task.title));
+    if (wedge && wedge.status !== "done") return;
+    hiringKickoffs.add(organizationId);
+    const roles = (snapshot.organization.hiringRoles ?? []).length
+      ? snapshot.organization.hiringRoles
+      : suggestHiringRoles(snapshot.organization.goal);
+    void (async () => {
+      setBusy("hiring-roles");
+      try {
+        const response = await fetch(`/api/organizations/${organizationId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ hiringRoles: roles }),
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          setError(typeof data.error === "string" ? data.error : "Could not run hiring search");
+        }
+        await load();
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Could not run hiring search");
+      } finally {
+        setBusy(null);
+      }
+    })();
+  }, [snapshot, organizationId, busy]);
 
   const orgHref = `/organizations/${organizationId}`;
 

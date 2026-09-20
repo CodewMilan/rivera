@@ -4,10 +4,10 @@ import { FakeSearchProvider, recordedSearchFixtures } from "./search";
 import { searchGithubIssues } from "./github";
 
 describe("phase 3 tools", () => {
-  it("returns recorded search fixtures", async () => {
-    const results = await new FakeSearchProvider().search("stellar soroban debug");
-    expect(results).toEqual(recordedSearchFixtures.stellar);
-    expect(results[0]?.url).toMatch(/^https?:\/\//);
+  it("returns recorded LinkedIn fixtures for hiring queries", async () => {
+    const results = await new FakeSearchProvider().search('site:linkedin.com/in "Founding Engineer" Soroban');
+    expect(results).toEqual(recordedSearchFixtures.linkedin);
+    expect(results[0]?.url).toContain("linkedin.com/in/");
   });
 
   it("returns a recorded GitHub issue in tests", async () => {
