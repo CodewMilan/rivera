@@ -683,14 +683,12 @@ function InboxPanel({
     </div>
   ) : (
     <div className="flex flex-wrap gap-2">
-      {gmail.configured ? (
-        <a
-          href={`/api/organizations/${organizationId}/gmail/connect`}
-          className="inline-flex min-h-11 items-center rounded-[5px] border border-white bg-white px-3 text-xs text-[#221d2a] focus-visible:ring-2 focus-visible:ring-[#c2b8ff]"
-        >
-          Connect Gmail
-        </a>
-      ) : null}
+      <a
+        href={`/api/organizations/${organizationId}/gmail/connect`}
+        className="inline-flex min-h-11 items-center rounded-[5px] border border-white bg-white px-3 text-xs text-[#221d2a] focus-visible:ring-2 focus-visible:ring-[#c2b8ff]"
+      >
+        Connect Google account
+      </a>
       <button
         type="button"
         disabled={busy === "gmail-demo"}
@@ -707,8 +705,8 @@ function InboxPanel({
       title={gmail.connected ? `Inbox · ${gmail.email}` : "Inbox"}
       action={action}
     >
-      {!gmail.connected && !gmail.configured ? (
-        <Empty label="Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to connect a real Gmail inbox, or preview sample mail." />
+      {!gmail.connected && messages.length === 0 ? (
+        <Empty label="Connect Google to scan Gmail for demand, hiring replies, and other launch-relevant mail." />
       ) : null}
       {gmail.connected && relevant.length === 0 && messages.length === 0 ? (
         <Empty label="Gmail is connected. Scan the inbox to surface launch-relevant mail." />

@@ -11,7 +11,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   const org = await store.getOrganization(id);
   if (!org) return errorJson("Organization not found", 404);
   if (!googleOAuthConfigured()) {
-    return errorJson("Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to connect Gmail", 501);
+    return errorJson("Google sign-in is not set up on this deployment yet", 501);
   }
 
   const { state, nonce } = createOAuthState(id);
