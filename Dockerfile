@@ -1,11 +1,11 @@
 FROM node:20-alpine AS deps
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.14.0 --activate
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 FROM node:20-alpine AS builder
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.14.0 --activate
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

@@ -1,11 +1,11 @@
 import { createSql } from "@/lib/database/connection";
 import { json } from "@/lib/http/json";
-import { useMemoryStore } from "@/lib/store";
+import { isMemoryStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const memory = useMemoryStore();
+  const memory = isMemoryStore();
   const checks: Record<string, string> = {
     store: memory ? "memory" : "postgres",
     demoMode: process.env.DEMO_MODE === "true" || !process.env.LLM_API_KEY ? "true" : "false",

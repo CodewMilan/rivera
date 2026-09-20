@@ -9,14 +9,14 @@ export { createPostgresStore, migratePostgres } from "./postgres";
 let storePromise: Promise<Store> | null = null;
 let memoryStore = createMemoryStore();
 
-export function useMemoryStore(): boolean {
+export function isMemoryStore(): boolean {
   if (process.env.RIVERA_STORE === "memory") return true;
   if (process.env.RIVERA_STORE === "postgres") return false;
   return !process.env.DATABASE_URL;
 }
 
 export async function getStore(): Promise<Store> {
-  if (useMemoryStore()) {
+  if (isMemoryStore()) {
     const production = process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
     if (production && process.env.ALLOW_MEMORY_STORE !== "true" && process.env.RIVERA_STORE !== "memory") {
       throw new Error(

@@ -12,7 +12,7 @@ import type { Store } from "@/lib/store";
 import { searchGithubIssues } from "@/lib/tools/github";
 import { calculate } from "@/lib/tools/calculator";
 import type { ResearchProvider } from "@/lib/tools/search";
-import type { AgentOutput, AgentType, Organization, Run, RunStatus, Task } from "@/types";
+import type { AgentOutput, AgentType, ContentPlatform, Organization, Run, RunStatus, Task } from "@/types";
 import { assertTransition, isTerminal } from "./states";
 import { completeTask, dependenciesSatisfied, failTask, startTask } from "./task-engine";
 
@@ -484,7 +484,7 @@ async function createCampaign(deps: OrchestratorDeps, org: Organization, run: Ru
     pillars: ["Problem", "Wedge", "Founder note"],
     createdAt: nowIso(),
   });
-  const channels = org.preferredChannels.length ? org.preferredChannels : ["x", "linkedin"];
+  const channels: ContentPlatform[] = org.preferredChannels.length ? org.preferredChannels : ["x", "linkedin"];
   const tasks = await deps.store.listTasksByRun(run.id);
   const context = tasks
     .map((task) => task.output as AgentOutput | undefined)
@@ -516,11 +516,12 @@ async function createCampaign(deps: OrchestratorDeps, org: Organization, run: Ru
     drafts = channels.map((platform) => {
       const post = byPlatform.get(platform);
       const fallback = demoContentItems([platform], org.name)[0];
+      const type = post?.type === "video" || post?.type === "text" ? post.type : fallback.type;
       return {
         ...fallback,
         ...post,
         platform,
-        type: post?.type ?? fallback.type,
+        type,
         hashtags: post?.hashtags ?? fallback.hashtags,
         claimsUsed: post?.claimsUsed ?? fallback.claimsUsed,
       };
@@ -727,7 +728,7 @@ export async function runOrganization(runId: string, deps: OrchestratorDeps): Pr
             summary: `github search failed: ${error instanceof Error ? error.message : "error"}`,
           });
         }
-        let researchResult = await runTypedTasks(deps, org, run, ["research"], {
+        const researchResult = await runTypedTasks(deps, org, run, ["research"], {
           research: [...search, ...github],
         });
         org = researchResult.org;
