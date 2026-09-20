@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { IntakeForm } from "@/components/intake-form";
 import { FigmaAsset } from "@/components/site/figma-asset";
 import { OutlineButton, SolidButton } from "@/components/site/buttons";
@@ -186,24 +187,28 @@ function FeatureCards() {
         <FeatureCard
           title="Research and specialist agents"
           body="created with every goal. Collaborate with research, strategy, engineering, and marketing in one run."
+          href="/docs/agents"
         >
           <FeaturePreviewComment />
         </FeatureCard>
         <FeatureCard
           title="Live CEO planning"
           body="does the heavy lifting for you. One goal continuously becomes tasks, with live LLM output you can inspect."
+          href="/docs/runs"
         >
           <FeaturePreviewPlan />
         </FeatureCard>
         <FeatureCard
           title="Debate and approvals"
           body="offers configurable human gates for risky actions, budget spend, and anything that should not auto-run."
+          href="/docs/approvals"
         >
           <FeaturePreviewPipeline />
         </FeatureCard>
         <FeatureCard
           title="Social campaign review"
           body="is a click away. Rest assured, publish stays off until you approve, and you control who can ship."
+          href="/docs/content"
         >
           <FeaturePreviewPromote />
         </FeatureCard>
@@ -216,9 +221,9 @@ function FeatureCards() {
                   lets you review captions, media, and the final report before anything goes live. One click when you are ready.
                 </span>
               </h3>
-              <a href="#intake" className="text-[18px] font-light leading-[24px] text-[#c2b8ff]">
+              <Link href="/docs/content" className="text-[18px] font-light leading-[24px] text-[#c2b8ff]">
                 Learn more ↗
-              </a>
+              </Link>
             </div>
             <FeaturePreviewEditor />
           </div>
@@ -231,10 +236,12 @@ function FeatureCards() {
 function FeatureCard({
   title,
   body,
+  href,
   children,
 }: {
   title: string;
   body: string;
+  href: string;
   children: ReactNode;
 }) {
   return (
@@ -242,9 +249,9 @@ function FeatureCard({
       <h3 className="text-[29px] font-normal leading-[36px] text-[#f4f2f0]">
         {title} <span className="text-[rgba(146,140,151,0.9)]">{body}</span>
       </h3>
-      <a href="#intake" className="mt-6 text-[18px] font-light leading-[24px] text-[#c2b8ff]">
+      <Link href={href} className="mt-6 text-[18px] font-light leading-[24px] text-[#c2b8ff]">
         Learn more ↗
-      </a>
+      </Link>
       <div className="mt-auto pt-8">{children}</div>
     </article>
   );

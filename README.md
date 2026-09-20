@@ -15,7 +15,7 @@ pnpm test
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), submit the demo goal, and watch the organization dashboard. Research evidence, scored tasks, and media previews appear as the run progresses.
+Open [http://localhost:3000](http://localhost:3000), submit the demo goal, and watch the organization dashboard. Product docs live at [/docs](http://localhost:3000/docs).
 
 Leave `LLM_API_KEY` empty to run in demo mode with labeled fixtures. Set it to use a live OpenAI-compatible model. Optional: `TAVILY_API_KEY`, `GITHUB_TOKEN`, and Higgsfield keys for live tools and media.
 

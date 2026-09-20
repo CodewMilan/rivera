@@ -39,7 +39,7 @@ function AlertBanner() {
   return (
     <div className="flex flex-col items-center bg-[#c2b8ff]" data-name="div.alert_banner">
       <a
-        href="/#features"
+        href="/docs"
         className="flex w-full max-w-[1370px] items-center justify-center gap-[13.99px] px-[30px] py-[8px] rounded-[1px]"
       >
         <span className="rounded-[4px] bg-[#f4f2f0] px-[7px] text-[12px] capitalize leading-[24px] text-[#0c0a10]">
@@ -57,7 +57,9 @@ function AlertBanner() {
 
 function SiteHeader() {
   const pathname = usePathname();
+  const onFeatures = pathname === "/features";
   const onPricing = pathname === "/pricing";
+  const onDocs = pathname === "/docs" || pathname.startsWith("/docs/");
 
   return (
     <header className="relative z-20 mx-auto flex h-[64px] w-full max-w-[1370px] items-center justify-between px-[30px]" data-name="Banner">
@@ -65,7 +67,15 @@ function SiteHeader() {
         <RiveraMark />
       </Link>
       <nav className="hidden items-center md:flex" aria-label="Primary">
-        <Link href="/#features" className="flex items-center gap-[4.99px] px-[15px] py-[20px] text-[14px] leading-[24px] text-[#f4f2f0]">
+        <Link
+          href="/features"
+          aria-current={onFeatures ? "page" : undefined}
+          className={
+            onFeatures
+              ? "flex items-center gap-[4.99px] px-[15px] py-[20px] text-[14px] leading-[24px] text-[#c2b8ff]"
+              : "flex items-center gap-[4.99px] px-[15px] py-[20px] text-[14px] leading-[24px] text-[#f4f2f0]"
+          }
+        >
           Features
           <span className="-scale-y-100">
             <FigmaAsset src={figma.chevron} alt="" width={12} height={12} />
@@ -79,7 +89,11 @@ function SiteHeader() {
         >
           Pricing
         </Link>
-        <Link href="/#grid" className="px-[15px] text-[15px] leading-[24px] text-[#f4f2f0]">
+        <Link
+          href="/docs"
+          aria-current={onDocs ? "page" : undefined}
+          className={onDocs ? "px-[15px] text-[15px] leading-[24px] text-[#c2b8ff]" : "px-[15px] text-[15px] leading-[24px] text-[#f4f2f0]"}
+        >
           Docs
         </Link>
         <AuthNavLink />
@@ -123,7 +137,7 @@ function SiteFooter() {
         </h2>
         <div className="mt-[21px] flex flex-wrap items-center gap-[10px]">
           <SolidButton href="/#intake">Try a sandbox</SolidButton>
-          <OutlineButton href="/#features">
+          <OutlineButton href="/features">
             <DemoThumb />
             Watch the demo
           </OutlineButton>
@@ -140,8 +154,11 @@ function SiteFooter() {
             <Link href="/pricing" className="text-[13px] leading-[24px] text-[#928c97]">
               Pricing
             </Link>
-            <Link href="/#features" className="text-[13px] leading-[24px] text-[#928c97]">
-              Blog
+            <Link href="/docs" className="text-[13px] leading-[24px] text-[#928c97]">
+              Docs
+            </Link>
+            <Link href="/features" className="text-[13px] leading-[24px] text-[#928c97]">
+              Features
             </Link>
             <Link href="/#intake" className="text-[13px] leading-[24px] text-[#928c97]">
               Jobs
