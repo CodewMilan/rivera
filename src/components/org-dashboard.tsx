@@ -7,7 +7,7 @@ import { money, phaseLabel, shortDate } from "@/lib/format";
 import { evidenceFromEvents, toolMetricsFromEvents } from "@/lib/research/evidence";
 import type { Asset, OrganizationSnapshot } from "@/types";
 
-export type DashboardTab = "overview" | "agents" | "tasks" | "timeline" | "decisions" | "content" | "report";
+export type DashboardTab = "overview" | "agents" | "tasks" | "timeline" | "decisions" | "content" | "build" | "report";
 
 const launchingOrgs = new Set<string>();
 
@@ -131,6 +131,7 @@ export function OrgDashboard({
     { id: "timeline", label: "Timeline", href: `${orgHref}#timeline` },
     { id: "decisions", label: "Decisions", href: `${orgHref}/decisions` },
     { id: "content", label: "Content", href: `${orgHref}/content` },
+    { id: "build", label: "Build", href: `${orgHref}/build` },
     { id: "report", label: "Report", href: `${orgHref}/report` },
   ];
 

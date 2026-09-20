@@ -91,8 +91,31 @@ CREATE TABLE IF NOT EXISTS inbox_messages (
   UNIQUE (organization_id, gmail_id)
 );
 
+CREATE TABLE IF NOT EXISTS github_connections (
+  organization_id TEXT PRIMARY KEY,
+  data JSONB NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS build_configs (
+  organization_id TEXT PRIMARY KEY,
+  data JSONB NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS build_secrets (
+  organization_id TEXT PRIMARY KEY,
+  data JSONB NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS build_runs (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  data JSONB NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS runs_org_idx ON runs (organization_id);
 CREATE INDEX IF NOT EXISTS events_org_idx ON events (organization_id);
 CREATE INDEX IF NOT EXISTS media_jobs_provider_idx ON media_jobs (provider_job_id);
 CREATE INDEX IF NOT EXISTS inbox_messages_org_idx ON inbox_messages (organization_id);
+CREATE INDEX IF NOT EXISTS build_runs_org_idx ON build_runs (organization_id);
 `;

@@ -1,12 +1,17 @@
+import { nowIso } from "@/lib/clock";
 import type {
   Agent,
   Approval,
   Asset,
+  BuildConfig,
+  BuildRun,
+  BuildSecrets,
   ContentCampaign,
   ContentItem,
   Decision,
   EventRecord,
   FinalReport,
+  GitHubConnection,
   GmailConnection,
   InboxMessage,
   MediaJob,
@@ -16,6 +21,15 @@ import type {
   Task,
 } from "@/types";
 import type { Store } from "./types";
+
+function defaultBuildConfig(organizationId: string): BuildConfig {
+  return {
+    organizationId,
+    cursorApiKeySet: false,
+    autoCreatePR: true,
+    updatedAt: nowIso(),
+  };
+}
 
 function clone<T>(value: T): T {
   return structuredClone(value);
@@ -41,6 +55,10 @@ export function createMemoryStore(): Store {
   const reports = new Map<string, FinalReport>();
   const gmailConnections = new Map<string, GmailConnection>();
   const inboxMessages = new Map<string, InboxMessage>();
+  const githubConnections = new Map<string, GitHubConnection>();
+  const buildConfigs = new Map<string, BuildConfig>();
+  const buildSecrets = new Map<string, BuildSecrets>();
+  const buildRuns = new Map<string, BuildRun>();
 
   return {
     async createOrganization(org) {
@@ -330,6 +348,66 @@ export function createMemoryStore(): Store {
       }
     },
 
+    async upsertGitHubConnection(connection) {
+      githubConnections.set(connection.organizationId, clone(connection));
+      return clone(connection);
+    },
+    async getGitHubConnection(organizationId) {
+      const connection = githubConnections.get(organizationId);
+      return connection ? clone(connection) : undefined;
+    },
+    async deleteGitHubConnection(organizationId) {
+      githubConnections.delete(organizationId);
+    },
+    async getGitHubStatus(organizationId) {
+      const connection = githubConnections.get(organizationId);
+      return {
+        configured: Boolean(process.env.GITHUB_OAUTH_CLIENT_ID && process.env.GITHUB_OAUTH_CLIENT_SECRET),
+        connected: Boolean(connection),
+        login: connection?.login,
+      };
+    },
+
+    async upsertBuildConfig(config) {
+      buildConfigs.set(config.organizationId, clone(config));
+      return clone(config);
+    },
+    async getBuildConfig(organizationId) {
+      const existing = buildConfigs.get(organizationId);
+      if (existing) return clone(existing);
+      const created = defaultBuildConfig(organizationId);
+      buildConfigs.set(organizationId, created);
+      return clone(created);
+    },
+    async setBuildSecret(secret) {
+      buildSecrets.set(secret.organizationId, clone(secret));
+    },
+    async getBuildSecret(organizationId) {
+      const secret = buildSecrets.get(organizationId);
+      return secret ? clone(secret) : undefined;
+    },
+
+    async createBuildRun(buildRun) {
+      buildRuns.set(buildRun.id, clone(buildRun));
+      return clone(buildRun);
+    },
+    async getBuildRun(id) {
+      const buildRun = buildRuns.get(id);
+      return buildRun ? clone(buildRun) : undefined;
+    },
+    async listBuildRuns(organizationId) {
+      return [...buildRuns.values()]
+        .filter((item) => item.organizationId === organizationId)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .map(clone);
+    },
+    async updateBuildRun(id, patch) {
+      const current = requireEntity(buildRuns.get(id), "Build run");
+      const next = { ...current, ...patch, updatedAt: patch.updatedAt ?? nowIso() };
+      buildRuns.set(id, next);
+      return clone(next);
+    },
+
     async snapshot(organizationId): Promise<OrganizationSnapshot | undefined> {
       const organization = organizations.get(organizationId);
       if (!organization) return undefined;
@@ -351,6 +429,9 @@ export function createMemoryStore(): Store {
         report: await this.getReport(organizationId),
         gmail: await this.getGmailStatus(organizationId),
         inboxMessages: await this.listInboxMessages(organizationId),
+        github: await this.getGitHubStatus(organizationId),
+        buildConfig: await this.getBuildConfig(organizationId),
+        builds: await this.listBuildRuns(organizationId),
       };
     },
   };

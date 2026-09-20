@@ -2,11 +2,16 @@ import type {
   Agent,
   Approval,
   Asset,
+  BuildConfig,
+  BuildRun,
+  BuildSecrets,
   ContentCampaign,
   ContentItem,
   Decision,
   EventRecord,
   FinalReport,
+  GitHubConnection,
+  GitHubStatus,
   GmailConnection,
   GmailStatus,
   InboxMessage,
@@ -87,6 +92,21 @@ export interface Store {
   upsertInboxMessage(message: InboxMessage): Promise<InboxMessage>;
   listInboxMessages(organizationId: string): Promise<InboxMessage[]>;
   deleteInboxMessages(organizationId: string): Promise<void>;
+
+  upsertGitHubConnection(connection: GitHubConnection): Promise<GitHubConnection>;
+  getGitHubConnection(organizationId: string): Promise<GitHubConnection | undefined>;
+  deleteGitHubConnection(organizationId: string): Promise<void>;
+  getGitHubStatus(organizationId: string): Promise<GitHubStatus>;
+
+  upsertBuildConfig(config: BuildConfig): Promise<BuildConfig>;
+  getBuildConfig(organizationId: string): Promise<BuildConfig>;
+  setBuildSecret(secret: BuildSecrets): Promise<void>;
+  getBuildSecret(organizationId: string): Promise<BuildSecrets | undefined>;
+
+  createBuildRun(buildRun: BuildRun): Promise<BuildRun>;
+  getBuildRun(id: string): Promise<BuildRun | undefined>;
+  listBuildRuns(organizationId: string): Promise<BuildRun[]>;
+  updateBuildRun(id: string, patch: Partial<BuildRun>): Promise<BuildRun>;
 
   snapshot(organizationId: string): Promise<OrganizationSnapshot | undefined>;
 }

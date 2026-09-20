@@ -50,7 +50,8 @@ export type ApprovalActionType =
   | "schedule_social_post"
   | "spend_budget"
   | "deploy_production"
-  | "send_external_message";
+  | "send_external_message"
+  | "dispatch_build_agent";
 
 export type ApprovalStatus = "pending" | "approved" | "rejected" | "expired";
 
@@ -286,6 +287,74 @@ export type FinalReport = {
   artifacts: string[];
 };
 
+export type GitHubConnection = {
+  organizationId: string;
+  login: string;
+  accessToken: string;
+  scope: string;
+  connectedAt: string;
+};
+
+export type GitHubStatus = {
+  configured: boolean;
+  connected: boolean;
+  login?: string;
+};
+
+export type GitHubRepoSummary = {
+  fullName: string;
+  defaultBranch: string;
+  private: boolean;
+  htmlUrl: string;
+  pushedAt?: string;
+};
+
+export type BuildConfig = {
+  organizationId: string;
+  cursorApiKeySet: boolean;
+  repoFullName?: string;
+  repoUrl?: string;
+  branch?: string;
+  autoCreatePR: boolean;
+  updatedAt: string;
+};
+
+/** Persisted separately from BuildConfig so we can return status without leaking the key. */
+export type BuildSecrets = {
+  organizationId: string;
+  cursorApiKey?: string;
+};
+
+export type BuildRunStatus =
+  | "pending_approval"
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type BuildRun = {
+  id: string;
+  organizationId: string;
+  provider: "cursor";
+  status: BuildRunStatus;
+  prompt: string;
+  repoFullName: string;
+  branch: string;
+  model: string;
+  autoCreatePR: boolean;
+  cursorAgentId?: string;
+  cursorRunId?: string;
+  cursorStatus?: string;
+  prUrl?: string;
+  agentUrl?: string;
+  summary?: string;
+  error?: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+};
+
 export type GmailConnection = {
   organizationId: string;
   email: string;
@@ -333,4 +402,8 @@ export type OrganizationSnapshot = {
   report?: FinalReport;
   gmail: GmailStatus;
   inboxMessages: InboxMessage[];
+  github: GitHubStatus;
+  buildConfig: BuildConfig;
+  builds: BuildRun[];
 };
+

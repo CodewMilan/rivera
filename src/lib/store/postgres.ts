@@ -1,15 +1,20 @@
 import { type Sql } from "postgres";
 import { createSql } from "@/lib/database/connection";
 import { SCHEMA_SQL } from "@/lib/database/schema";
+import { nowIso } from "@/lib/clock";
 import type {
   Agent,
   Approval,
   Asset,
+  BuildConfig,
+  BuildRun,
+  BuildSecrets,
   ContentCampaign,
   ContentItem,
   Decision,
   EventRecord,
   FinalReport,
+  GitHubConnection,
   GmailConnection,
   InboxMessage,
   MediaJob,
@@ -19,6 +24,15 @@ import type {
   Task,
 } from "@/types";
 import type { Store } from "./types";
+
+function defaultBuildConfig(organizationId: string): BuildConfig {
+  return {
+    organizationId,
+    cursorApiKeySet: false,
+    autoCreatePR: true,
+    updatedAt: nowIso(),
+  };
+}
 
 function row<T>(result: { data: T }[] | undefined): T | undefined {
   return result?.[0]?.data;
@@ -341,6 +355,83 @@ export function createPostgresStore(sql: Sql): Store {
       await sql`DELETE FROM inbox_messages WHERE organization_id = ${organizationId}`;
     },
 
+    async upsertGitHubConnection(connection) {
+      await sql`
+        INSERT INTO github_connections (organization_id, data)
+        VALUES (${connection.organizationId}, ${jsonValue(sql, connection)})
+        ON CONFLICT (organization_id) DO UPDATE SET data = ${jsonValue(sql, connection)}
+      `;
+      return connection;
+    },
+    async getGitHubConnection(organizationId) {
+      const rows = await sql<{ data: GitHubConnection }[]>`SELECT data FROM github_connections WHERE organization_id = ${organizationId}`;
+      return row(rows);
+    },
+    async deleteGitHubConnection(organizationId) {
+      await sql`DELETE FROM github_connections WHERE organization_id = ${organizationId}`;
+    },
+    async getGitHubStatus(organizationId) {
+      const connection = await this.getGitHubConnection(organizationId);
+      return {
+        configured: Boolean(process.env.GITHUB_OAUTH_CLIENT_ID && process.env.GITHUB_OAUTH_CLIENT_SECRET),
+        connected: Boolean(connection),
+        login: connection?.login,
+      };
+    },
+
+    async upsertBuildConfig(config) {
+      await sql`
+        INSERT INTO build_configs (organization_id, data)
+        VALUES (${config.organizationId}, ${jsonValue(sql, config)})
+        ON CONFLICT (organization_id) DO UPDATE SET data = ${jsonValue(sql, config)}
+      `;
+      return config;
+    },
+    async getBuildConfig(organizationId) {
+      const rows = await sql<{ data: BuildConfig }[]>`SELECT data FROM build_configs WHERE organization_id = ${organizationId}`;
+      const existing = row(rows);
+      if (existing) return existing;
+      const created = defaultBuildConfig(organizationId);
+      await sql`INSERT INTO build_configs (organization_id, data) VALUES (${organizationId}, ${jsonValue(sql, created)})`;
+      return created;
+    },
+    async setBuildSecret(secret) {
+      await sql`
+        INSERT INTO build_secrets (organization_id, data)
+        VALUES (${secret.organizationId}, ${jsonValue(sql, secret)})
+        ON CONFLICT (organization_id) DO UPDATE SET data = ${jsonValue(sql, secret)}
+      `;
+    },
+    async getBuildSecret(organizationId) {
+      const rows = await sql<{ data: BuildSecrets }[]>`SELECT data FROM build_secrets WHERE organization_id = ${organizationId}`;
+      return row(rows);
+    },
+
+    async createBuildRun(buildRun) {
+      await sql`
+        INSERT INTO build_runs (id, organization_id, created_at, data)
+        VALUES (${buildRun.id}, ${buildRun.organizationId}, ${buildRun.createdAt}, ${jsonValue(sql, buildRun)})
+      `;
+      return buildRun;
+    },
+    async getBuildRun(id) {
+      const rows = await sql<{ data: BuildRun }[]>`SELECT data FROM build_runs WHERE id = ${id}`;
+      return row(rows);
+    },
+    async listBuildRuns(organizationId) {
+      const rows = await sql<{ data: BuildRun }[]>`
+        SELECT data FROM build_runs WHERE organization_id = ${organizationId} ORDER BY created_at DESC
+      `;
+      return rows.map((item) => item.data);
+    },
+    async updateBuildRun(id, patch) {
+      const current = await this.getBuildRun(id);
+      if (!current) throw new Error("Build run not found");
+      const next = { ...current, ...patch, updatedAt: patch.updatedAt ?? nowIso() };
+      await sql`UPDATE build_runs SET data = ${jsonValue(sql, next)} WHERE id = ${id}`;
+      return next;
+    },
+
     async snapshot(organizationId): Promise<OrganizationSnapshot | undefined> {
       const organization = await this.getOrganization(organizationId);
       if (!organization) return undefined;
@@ -359,6 +450,9 @@ export function createPostgresStore(sql: Sql): Store {
         report: await this.getReport(organizationId),
         gmail: await this.getGmailStatus(organizationId),
         inboxMessages: await this.listInboxMessages(organizationId),
+        github: await this.getGitHubStatus(organizationId),
+        buildConfig: await this.getBuildConfig(organizationId),
+        builds: await this.listBuildRuns(organizationId),
       };
     },
   };
