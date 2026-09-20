@@ -7,6 +7,9 @@ import type {
   Decision,
   EventRecord,
   FinalReport,
+  GmailConnection,
+  GmailStatus,
+  InboxMessage,
   MediaJob,
   Organization,
   OrganizationSnapshot,
@@ -74,6 +77,15 @@ export interface Store {
 
   saveReport(report: FinalReport): Promise<FinalReport>;
   getReport(organizationId: string): Promise<FinalReport | undefined>;
+
+  upsertGmailConnection(connection: GmailConnection): Promise<GmailConnection>;
+  getGmailConnection(organizationId: string): Promise<GmailConnection | undefined>;
+  deleteGmailConnection(organizationId: string): Promise<void>;
+  getGmailStatus(organizationId: string): Promise<GmailStatus>;
+
+  upsertInboxMessage(message: InboxMessage): Promise<InboxMessage>;
+  listInboxMessages(organizationId: string): Promise<InboxMessage[]>;
+  deleteInboxMessages(organizationId: string): Promise<void>;
 
   snapshot(organizationId: string): Promise<OrganizationSnapshot | undefined>;
 }

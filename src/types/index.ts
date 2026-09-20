@@ -29,6 +29,7 @@ export type AgentType =
   | "social_media"
   | "hiring"
   | "competitor"
+  | "inbox"
   | "evaluator";
 
 export type AgentStatus = "idle" | "working" | "blocked" | "review" | "failed";
@@ -284,6 +285,38 @@ export type FinalReport = {
   artifacts: string[];
 };
 
+export type GmailConnection = {
+  organizationId: string;
+  email: string;
+  refreshToken: string;
+  accessToken: string;
+  accessTokenExpiresAt: string;
+  connectedAt: string;
+  lastSyncedAt?: string;
+};
+
+export type GmailStatus = {
+  configured: boolean;
+  connected: boolean;
+  email?: string;
+  lastSyncedAt?: string;
+};
+
+export type InboxMessage = {
+  id: string;
+  organizationId: string;
+  gmailId: string;
+  threadId: string;
+  from: string;
+  subject: string;
+  snippet: string;
+  receivedAt: string;
+  relevanceScore: number;
+  relevanceReason: string;
+  relevant: boolean;
+  demo?: boolean;
+};
+
 export type OrganizationSnapshot = {
   organization: Organization;
   run?: Run;
@@ -297,4 +330,6 @@ export type OrganizationSnapshot = {
   mediaJobs: MediaJob[];
   assets: Asset[];
   report?: FinalReport;
+  gmail: GmailStatus;
+  inboxMessages: InboxMessage[];
 };

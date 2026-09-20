@@ -21,6 +21,8 @@ describe.skipIf(!DATABASE_URL)("phase 1 postgres persistence", () => {
     if (!sql) return;
     for (const id of createdIds) {
       await sql`DELETE FROM events WHERE organization_id = ${id}`;
+      await sql`DELETE FROM inbox_messages WHERE organization_id = ${id}`;
+      await sql`DELETE FROM gmail_connections WHERE organization_id = ${id}`;
       await sql`DELETE FROM organizations WHERE id = ${id}`;
     }
     await sql.end({ timeout: 2 });

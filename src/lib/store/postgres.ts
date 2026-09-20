@@ -10,6 +10,8 @@ import type {
   Decision,
   EventRecord,
   FinalReport,
+  GmailConnection,
+  InboxMessage,
   MediaJob,
   Organization,
   OrganizationSnapshot,
@@ -280,6 +282,57 @@ export function createPostgresStore(sql: Sql): Store {
       return row(rows);
     },
 
+    async upsertGmailConnection(connection) {
+      await sql`
+        INSERT INTO gmail_connections (organization_id, data)
+        VALUES (${connection.organizationId}, ${jsonValue(sql, connection)})
+        ON CONFLICT (organization_id) DO UPDATE SET data = ${jsonValue(sql, connection)}
+      `;
+      return connection;
+    },
+    async getGmailConnection(organizationId) {
+      const rows = await sql<{ data: GmailConnection }[]>`SELECT data FROM gmail_connections WHERE organization_id = ${organizationId}`;
+      return row(rows);
+    },
+    async deleteGmailConnection(organizationId) {
+      await sql`DELETE FROM gmail_connections WHERE organization_id = ${organizationId}`;
+    },
+    async getGmailStatus(organizationId) {
+      const connection = await this.getGmailConnection(organizationId);
+      return {
+        configured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+        connected: Boolean(connection),
+        email: connection?.email,
+        lastSyncedAt: connection?.lastSyncedAt,
+      };
+    },
+
+    async upsertInboxMessage(message) {
+      const existing = await sql<{ data: InboxMessage }[]>`
+        SELECT data FROM inbox_messages
+        WHERE organization_id = ${message.organizationId} AND gmail_id = ${message.gmailId}
+      `;
+      const next = existing[0]?.data ? { ...existing[0].data, ...message, id: existing[0].data.id } : message;
+      if (existing[0]?.data) {
+        await sql`UPDATE inbox_messages SET data = ${jsonValue(sql, next)} WHERE id = ${next.id}`;
+      } else {
+        await sql`
+          INSERT INTO inbox_messages (id, organization_id, gmail_id, data)
+          VALUES (${next.id}, ${next.organizationId}, ${next.gmailId}, ${jsonValue(sql, next)})
+        `;
+      }
+      return next;
+    },
+    async listInboxMessages(organizationId) {
+      const rows = await sql<{ data: InboxMessage }[]>`SELECT data FROM inbox_messages WHERE organization_id = ${organizationId}`;
+      return rows
+        .map((item) => item.data)
+        .sort((a, b) => b.relevanceScore - a.relevanceScore || b.receivedAt.localeCompare(a.receivedAt));
+    },
+    async deleteInboxMessages(organizationId) {
+      await sql`DELETE FROM inbox_messages WHERE organization_id = ${organizationId}`;
+    },
+
     async snapshot(organizationId): Promise<OrganizationSnapshot | undefined> {
       const organization = await this.getOrganization(organizationId);
       if (!organization) return undefined;
@@ -296,6 +349,8 @@ export function createPostgresStore(sql: Sql): Store {
         mediaJobs: await this.listMediaJobs(organizationId),
         assets: await this.listAssets(organizationId),
         report: await this.getReport(organizationId),
+        gmail: await this.getGmailStatus(organizationId),
+        inboxMessages: await this.listInboxMessages(organizationId),
       };
     },
   };

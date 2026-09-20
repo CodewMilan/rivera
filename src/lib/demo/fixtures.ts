@@ -65,6 +65,12 @@ export const AGENT_ROSTER: Array<{
     objective: "Surface competing products from Reddit, Hacker News, and the open web.",
   },
   {
+    type: "inbox",
+    name: "Inbox",
+    tools: ["gmail"],
+    objective: "Scan connected Gmail for demand, hiring replies, and other launch-relevant mail.",
+  },
+  {
     type: "evaluator",
     name: "Evaluator",
     tools: [],
@@ -79,6 +85,7 @@ export const FOUNDER_AGENT_TYPES = [
   "engineering",
   "hiring",
   "social_media",
+  "inbox",
 ] as const;
 
 export const DEFAULT_HIRING_ROLES = [
@@ -129,6 +136,12 @@ export const FOUNDER_TASKS = [
     description: "Find public LinkedIn profiles for the roles the founder needs.",
     agentType: "hiring" as const,
     dependsOnTitles: ["Choose the wedge"],
+    estimatedCostCents: 20,
+  },
+  {
+    title: "Scan founder inbox",
+    description: "Read connected Gmail and surface messages relevant to this launch.",
+    agentType: "inbox" as const,
     estimatedCostCents: 20,
   },
   {
@@ -256,6 +269,14 @@ export function demoSpecialistOutput(agentType: AgentType, goal: string) {
         findings: ["Reddit + Hacker News threads gave the most direct comparisons"],
         risks: ["An incumbent may already own this wedge"],
         recommendation: "Pick one competitor to explicitly beat on speed or price.",
+      };
+    case "inbox":
+      return {
+        ...shared,
+        summary: "Inbox scan complete. Relevant mail is on the dashboard.",
+        findings: ["Gmail is read-only", "Noise like receipts is ignored"],
+        recommendation: "Follow up on the highest-scoring threads this week.",
+        artifacts: ["inbox-relevant"],
       };
     case "evaluator":
       return {

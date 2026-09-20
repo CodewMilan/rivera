@@ -12,6 +12,7 @@ export const agentOutputSchema = z.object({
       "social_media",
       "hiring",
       "competitor",
+      "inbox",
       "evaluator",
     ])
     .optional(),
@@ -47,6 +48,7 @@ export const ceoPlanSchema = z.object({
           "social_media",
           "hiring",
           "competitor",
+          "inbox",
           "evaluator",
         ]),
         objective: z.string().min(1),
@@ -68,6 +70,7 @@ export const ceoPlanSchema = z.object({
           "social_media",
           "hiring",
           "competitor",
+          "inbox",
           "evaluator",
         ]),
         dependsOnTitles: z.array(z.string()).optional(),

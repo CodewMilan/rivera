@@ -7,6 +7,8 @@ import type {
   Decision,
   EventRecord,
   FinalReport,
+  GmailConnection,
+  InboxMessage,
   MediaJob,
   Organization,
   OrganizationSnapshot,
@@ -37,6 +39,8 @@ export function createMemoryStore(): Store {
   const campaigns = new Map<string, ContentCampaign>();
   const contentItems = new Map<string, ContentItem>();
   const reports = new Map<string, FinalReport>();
+  const gmailConnections = new Map<string, GmailConnection>();
+  const inboxMessages = new Map<string, InboxMessage>();
 
   return {
     async createOrganization(org) {
@@ -281,6 +285,47 @@ export function createMemoryStore(): Store {
       return report ? clone(report) : undefined;
     },
 
+    async upsertGmailConnection(connection) {
+      gmailConnections.set(connection.organizationId, clone(connection));
+      return clone(connection);
+    },
+    async getGmailConnection(organizationId) {
+      const connection = gmailConnections.get(organizationId);
+      return connection ? clone(connection) : undefined;
+    },
+    async deleteGmailConnection(organizationId) {
+      gmailConnections.delete(organizationId);
+    },
+    async getGmailStatus(organizationId) {
+      const connection = gmailConnections.get(organizationId);
+      return {
+        configured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+        connected: Boolean(connection),
+        email: connection?.email,
+        lastSyncedAt: connection?.lastSyncedAt,
+      };
+    },
+
+    async upsertInboxMessage(message) {
+      const existing = [...inboxMessages.values()].find(
+        (item) => item.organizationId === message.organizationId && item.gmailId === message.gmailId,
+      );
+      const next = existing ? { ...existing, ...message, id: existing.id } : clone(message);
+      inboxMessages.set(next.id, next);
+      return clone(next);
+    },
+    async listInboxMessages(organizationId) {
+      return [...inboxMessages.values()]
+        .filter((item) => item.organizationId === organizationId)
+        .sort((a, b) => b.relevanceScore - a.relevanceScore || b.receivedAt.localeCompare(a.receivedAt))
+        .map(clone);
+    },
+    async deleteInboxMessages(organizationId) {
+      for (const [id, item] of inboxMessages) {
+        if (item.organizationId === organizationId) inboxMessages.delete(id);
+      }
+    },
+
     async snapshot(organizationId): Promise<OrganizationSnapshot | undefined> {
       const organization = organizations.get(organizationId);
       if (!organization) return undefined;
@@ -300,6 +345,8 @@ export function createMemoryStore(): Store {
         mediaJobs: await this.listMediaJobs(organizationId),
         assets: await this.listAssets(organizationId),
         report: await this.getReport(organizationId),
+        gmail: await this.getGmailStatus(organizationId),
+        inboxMessages: await this.listInboxMessages(organizationId),
       };
     },
   };

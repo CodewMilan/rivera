@@ -55,8 +55,8 @@ describe("phase 2 orchestrator", () => {
     const tasks = await store.listTasks(org.id);
     const events = await store.listEvents(org.id);
     expect(agents.some((agent) => agent.type === "ceo")).toBe(true);
-    expect(agents.length).toBe(7);
-    expect(tasks).toHaveLength(6);
+    expect(agents.length).toBe(8);
+    expect(tasks).toHaveLength(7);
     expect(events.some((event) => event.type === "agent.created")).toBe(true);
     expect(events.some((event) => event.type === "task.assigned")).toBe(true);
     expect(["review", "approval", "complete"]).toContain(run.status);

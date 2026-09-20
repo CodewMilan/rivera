@@ -77,6 +77,20 @@ CREATE TABLE IF NOT EXISTS reports (
   data JSONB NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS gmail_connections (
+  organization_id TEXT PRIMARY KEY,
+  data JSONB NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS inbox_messages (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  gmail_id TEXT NOT NULL,
+  data JSONB NOT NULL,
+  UNIQUE (organization_id, gmail_id)
+);
+
 CREATE INDEX IF NOT EXISTS runs_org_idx ON runs (organization_id);
 CREATE INDEX IF NOT EXISTS events_org_idx ON events (organization_id);
 CREATE INDEX IF NOT EXISTS media_jobs_provider_idx ON media_jobs (provider_job_id);
+CREATE INDEX IF NOT EXISTS inbox_messages_org_idx ON inbox_messages (organization_id);

@@ -49,8 +49,13 @@ export function OrgDashboard({
   }, [organizationId]);
 
   useEffect(() => {
-    const hash = window.location.hash.replace("#", "") as DashboardTab;
-    if (hash === "agents" || hash === "tasks" || hash === "timeline") setTab(hash);
+    const params = new URLSearchParams(window.location.search);
+    const gmailError = params.get("gmail");
+    if (!gmailError) return;
+    setError(`Gmail: ${gmailError.replaceAll("_", " ")}`);
+    params.delete("gmail");
+    const query = params.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`);
   }, [organizationId]);
 
   async function act(path: string, id?: string) {
@@ -95,14 +100,28 @@ export function OrgDashboard({
     );
   }
 
-  const { organization, run, agents, tasks, events, decisions, approvals, contentItems, mediaJobs, assets, report } =
-    snapshot;
+  const {
+    organization,
+    run,
+    agents,
+    tasks,
+    events,
+    decisions,
+    approvals,
+    contentItems,
+    mediaJobs,
+    assets,
+    report,
+    gmail = { configured: false, connected: false },
+    inboxMessages = [],
+  } = snapshot;
   const remaining = organization.budgetCents - organization.budgetUsedCents;
   const blocked = tasks.filter((task) => task.status === "blocked" || task.status === "approval_required");
   const pending = approvals.filter((item) => item.status === "pending");
   const evidence = evidenceFromEvents(events);
   const toolMetrics = toolMetricsFromEvents(events);
   const assetsById = new Map(assets.map((asset) => [asset.id, asset]));
+  const relevantMail = inboxMessages.filter((item) => item.relevant);
 
   const orgHref = `/organizations/${organizationId}`;
   const tabs: Array<{ id: DashboardTab; label: string; href: string }> = [
@@ -143,7 +162,7 @@ export function OrgDashboard({
         <Metric label="Phase" value={phaseLabel(run?.status)} />
         <Metric label="Budget used" value={`${money(organization.budgetUsedCents)} / ${money(organization.budgetCents)}`} />
         <Metric label="Remaining" value={money(remaining)} />
-        <Metric label="Pending approvals" value={String(pending.length)} />
+        <Metric label="Relevant mail" value={String(relevantMail.length)} />
       </section>
 
       <nav className="flex flex-wrap gap-2" aria-label="Organization sections">
@@ -215,6 +234,15 @@ export function OrgDashboard({
             )}
           </Panel>
         </div>
+        <InboxPanel
+          organizationId={organizationId}
+          gmail={gmail}
+          messages={inboxMessages}
+          busy={busy}
+          onSync={() => void act(`/api/organizations/${organizationId}/gmail/sync`, "gmail-sync")}
+          onDemo={() => void act(`/api/organizations/${organizationId}/gmail/demo`, "gmail-demo")}
+          onDisconnect={() => void act(`/api/organizations/${organizationId}/gmail/disconnect`, "gmail-disconnect")}
+        />
         <Panel title="Research evidence">
           {evidence.length === 0 && toolMetrics.length === 0 ? (
             <Empty label="Search, GitHub, and calculator results appear during research." />
@@ -480,12 +508,106 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Panel({ title, children }: { title: string; children: import("react").ReactNode }) {
+function Panel({ title, children, action }: { title: string; children: import("react").ReactNode; action?: import("react").ReactNode }) {
   return (
     <section className="rounded-[10px] bg-[rgba(39,38,45,0.8)] p-5">
-      <h2 className="text-sm font-medium">{title}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-sm font-medium">{title}</h2>
+        {action}
+      </div>
       <div className="mt-4">{children}</div>
     </section>
+  );
+}
+
+function InboxPanel({
+  organizationId,
+  gmail,
+  messages,
+  busy,
+  onSync,
+  onDemo,
+  onDisconnect,
+}: {
+  organizationId: string;
+  gmail: OrganizationSnapshot["gmail"];
+  messages: OrganizationSnapshot["inboxMessages"];
+  busy: string | null;
+  onSync: () => void;
+  onDemo: () => void;
+  onDisconnect: () => void;
+}) {
+  const relevant = messages.filter((item) => item.relevant);
+  const action = gmail.connected ? (
+    <div className="flex flex-wrap gap-2">
+      <button
+        type="button"
+        disabled={busy === "gmail-sync"}
+        onClick={onSync}
+        className="inline-flex min-h-11 items-center rounded-[5px] border border-[#c2b8ff] px-3 text-xs text-[#c2b8ff] focus-visible:ring-2 focus-visible:ring-[#c2b8ff] disabled:opacity-60"
+      >
+        {busy === "gmail-sync" ? "Scanning…" : "Scan inbox"}
+      </button>
+      <button
+        type="button"
+        disabled={busy === "gmail-disconnect"}
+        onClick={onDisconnect}
+        className="inline-flex min-h-11 items-center rounded-[5px] px-3 text-xs text-[#928c97] focus-visible:ring-2 focus-visible:ring-[#c2b8ff] disabled:opacity-60"
+      >
+        Disconnect
+      </button>
+    </div>
+  ) : (
+    <div className="flex flex-wrap gap-2">
+      {gmail.configured ? (
+        <a
+          href={`/api/organizations/${organizationId}/gmail/connect`}
+          className="inline-flex min-h-11 items-center rounded-[5px] border border-white bg-white px-3 text-xs text-[#221d2a] focus-visible:ring-2 focus-visible:ring-[#c2b8ff]"
+        >
+          Connect Gmail
+        </a>
+      ) : null}
+      <button
+        type="button"
+        disabled={busy === "gmail-demo"}
+        onClick={onDemo}
+        className="inline-flex min-h-11 items-center rounded-[5px] border border-[#c2b8ff] px-3 text-xs text-[#c2b8ff] focus-visible:ring-2 focus-visible:ring-[#c2b8ff] disabled:opacity-60"
+      >
+        {busy === "gmail-demo" ? "Loading…" : "Preview sample inbox"}
+      </button>
+    </div>
+  );
+
+  return (
+    <Panel
+      title={gmail.connected ? `Inbox · ${gmail.email}` : "Inbox"}
+      action={action}
+    >
+      {!gmail.connected && !gmail.configured ? (
+        <Empty label="Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to connect a real Gmail inbox, or preview sample mail." />
+      ) : null}
+      {gmail.connected && relevant.length === 0 && messages.length === 0 ? (
+        <Empty label="Gmail is connected. Scan the inbox to surface launch-relevant mail." />
+      ) : null}
+      {relevant.length === 0 && messages.length > 0 ? (
+        <Empty label="Scanned the inbox. Nothing looked relevant to this launch." />
+      ) : null}
+      {relevant.length > 0 ? (
+        <ul className="space-y-4">
+          {relevant.map((item) => (
+            <li key={item.id} className="border-t border-white/10 pt-4 first:border-t-0 first:pt-0">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <p className="text-sm text-[#f4f2f0]">{item.subject}</p>
+                <StatusBadge value={`${Math.round(item.relevanceScore * 100)}% match`} tone="good" />
+              </div>
+              <p className="mt-1 text-xs text-[#928c97]">{item.from}</p>
+              {item.snippet ? <p className="mt-2 text-sm text-muted-foreground">{item.snippet}</p> : null}
+              <p className="mt-2 text-xs text-[#c2b8ff]">{item.relevanceReason}</p>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </Panel>
   );
 }
 

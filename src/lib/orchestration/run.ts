@@ -3,6 +3,7 @@ import { nowIso } from "@/lib/clock";
 import { AGENT_ROSTER, FOUNDER_AGENTS, FOUNDER_TASKS, demoCeoPlan, demoContentItems, demoSpecialistOutput } from "@/lib/demo/fixtures";
 import { appendEvent } from "@/lib/events/log";
 import { assembleReport, evaluateAgentOutput, rejectIfOverBudget } from "@/lib/evaluation/report";
+import { syncGmailInbox } from "@/lib/gmail/sync";
 import { createId } from "@/lib/ids";
 import { settleMediaJob } from "@/lib/media/jobs";
 import { hasBlockingApproval, requestApproval } from "@/lib/approvals/engine";
@@ -247,6 +248,39 @@ async function searchHiringSources(deps: OrchestratorDeps, org: Organization, ru
   return findings;
 }
 
+async function scanInboxSources(deps: OrchestratorDeps, org: Organization, run: Run) {
+  const connected = await deps.store.getGmailConnection(org.id);
+  if (!connected) {
+    await appendEvent(deps.store, {
+      organizationId: org.id,
+      runId: run.id,
+      type: "tool.called",
+      summary: "Gmail is not connected; inbox scan skipped",
+      payload: { tool: "gmail", skipped: true },
+    });
+    return [{ skipped: true, reason: "gmail_not_connected" }];
+  }
+  try {
+    const result = await syncGmailInbox({ store: deps.store, org, llm: deps.llm, demo: run.demoMode });
+    await appendEvent(deps.store, {
+      organizationId: org.id,
+      runId: run.id,
+      type: "tool.called",
+      summary: `inbox scan found ${result.relevant.length} relevant of ${result.scanned} messages`,
+      payload: { tool: "gmail", scanned: result.scanned, relevant: result.relevant.length },
+    });
+    return result.relevant;
+  } catch (error) {
+    await appendEvent(deps.store, {
+      organizationId: org.id,
+      runId: run.id,
+      type: "tool.failed",
+      summary: `Gmail scan failed: ${error instanceof Error ? error.message : "error"}`,
+    });
+    return [];
+  }
+}
+
 function specialistPrompt(agentType: AgentType): string {
   const jobs: Partial<Record<AgentType, string>> = {
     research:
@@ -261,6 +295,8 @@ function specialistPrompt(agentType: AgentType): string {
       "extraFindings contains public LinkedIn search results with the role attached. Group them by role and recommend two names per role to reach out to. Put profile URLs in evidence.",
     competitor:
       "extraFindings contains Reddit, Hacker News, and open-web results about competing products. List the top 3-5 competitors with a one-line differentiator. Put source URLs in evidence.",
+    inbox:
+      "extraFindings contains Gmail messages scored against this launch. List the relevant ones (customer demand, hiring replies, partner intros, competitor notes). If Gmail is not connected, say so. Put subjects in evidence.",
   };
   const job = jobs[agentType] ?? "Coordinate the next Rivera step.";
   return `You are the ${agentType} agent in Rivera, an AI product-launch organization. ${job} Return JSON matching the agent output schema.`;
@@ -739,7 +775,14 @@ export async function runOrganization(runId: string, deps: OrchestratorDeps): Pr
           competitor: competitorHits,
         });
         org = competitorResult.org;
-        run = await transition(deps.store, competitorResult.run, "feasibility");
+        run = competitorResult.run;
+
+        const inboxHits = await scanInboxSources(deps, org, run);
+        const inboxResult = await runTypedTasks(deps, org, run, ["inbox"], {
+          inbox: inboxHits,
+        });
+        org = inboxResult.org;
+        run = await transition(deps.store, inboxResult.run, "feasibility");
         break;
       }
       case "feasibility": {

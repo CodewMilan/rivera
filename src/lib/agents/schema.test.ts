@@ -11,6 +11,7 @@ const types = [
   "social_media",
   "hiring",
   "competitor",
+  "inbox",
   "evaluator",
 ] as const;
 
