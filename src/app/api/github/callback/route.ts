@@ -1,5 +1,7 @@
+import { auth } from "@clerk/nextjs/server";
 import { nowIso } from "@/lib/clock";
 import { appOrigin } from "@/lib/config";
+import { encryptSecret } from "@/lib/crypto/secret";
 import { githubViewer } from "@/lib/github/client";
 import { exchangeGitHubCode, GITHUB_OAUTH_COOKIE, parseGitHubOAuthState } from "@/lib/github/oauth";
 import { getStore } from "@/lib/store";
@@ -40,16 +42,29 @@ export async function GET(request: Request) {
     return fail(undefined, "invalid_state");
   }
 
+  // Verify the returning user still owns this org — the state cookie proves
+  // this browser initiated the flow, but we should also confirm they're
+  // signed in and authorized on the org before we write a GitHub token.
+  let userId: string | null = null;
   try {
-    const tokens = await exchangeGitHubCode(code);
-    const viewer = await githubViewer(tokens.accessToken);
+    userId = (await auth()).userId ?? null;
+  } catch {
+    userId = null;
+  }
+  if (!userId) return fail(organizationId, "not_signed_in");
+
+  try {
     const store = await getStore();
     const org = await store.getOrganization(organizationId);
     if (!org) return fail(organizationId, "org_not_found");
+    if (org.ownerUserId && org.ownerUserId !== userId) return fail(organizationId, "forbidden");
+
+    const tokens = await exchangeGitHubCode(code);
+    const viewer = await githubViewer(tokens.accessToken);
     await store.upsertGitHubConnection({
       organizationId,
       login: viewer.login,
-      accessToken: tokens.accessToken,
+      accessToken: encryptSecret(tokens.accessToken),
       scope: tokens.scope,
       connectedAt: nowIso(),
     });

@@ -1,3 +1,4 @@
+import { requireOrgAccess } from "@/lib/auth/org-guard";
 import { errorJson } from "@/lib/http/json";
 import {
   createGitHubOAuthState,
@@ -5,16 +6,15 @@ import {
   githubAuthUrl,
   githubOAuthConfigured,
 } from "@/lib/github/oauth";
-import { getStore } from "@/lib/store";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
-  const store = await getStore();
-  const org = await store.getOrganization(id);
-  if (!org) return errorJson("Organization not found", 404);
+  const access = await requireOrgAccess(id);
+  if (access instanceof Response) return access;
+
   if (!githubOAuthConfigured()) {
     return errorJson(
       "Set GITHUB_OAUTH_CLIENT_ID and GITHUB_OAUTH_CLIENT_SECRET to connect GitHub",

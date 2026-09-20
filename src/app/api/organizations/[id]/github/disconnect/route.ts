@@ -1,11 +1,13 @@
-import { errorJson, json } from "@/lib/http/json";
-import { getStore } from "@/lib/store";
+import { requireOrgAccess } from "@/lib/auth/org-guard";
+import { nowIso } from "@/lib/clock";
+import { json } from "@/lib/http/json";
 
 export async function POST(_request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
-  const store = await getStore();
-  const org = await store.getOrganization(id);
-  if (!org) return errorJson("Organization not found", 404);
+  const access = await requireOrgAccess(id);
+  if (access instanceof Response) return access;
+  const { store } = access;
+
   await store.deleteGitHubConnection(id);
   const config = await store.getBuildConfig(id);
   await store.upsertBuildConfig({
@@ -13,7 +15,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     repoFullName: undefined,
     repoUrl: undefined,
     branch: undefined,
-    updatedAt: new Date().toISOString(),
+    updatedAt: nowIso(),
   });
   return json({ ok: true, github: await store.getGitHubStatus(id) });
 }
