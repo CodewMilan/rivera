@@ -35,6 +35,17 @@ export interface MediaProvider {
 export const DEMO_MEDIA_IMAGE = "/figma/img646B7Fb7Cd5C5Cfd37670871PromoteP800Png.png";
 export const DEMO_MEDIA_VIDEO_POSTER = "/figma/img6467Ac34Cc2Ce7B9D6Cde4BbDashboard201P1600Png.png";
 
+function demoFallback(kind: "image" | "video"): CreatedMediaJob {
+  const url = kind === "video" ? DEMO_MEDIA_VIDEO_POSTER : DEMO_MEDIA_IMAGE;
+  return {
+    providerJobId: `hf_demo_${createId()}`,
+    status: "completed",
+    outputUrl: url,
+    previewUrl: url,
+    estimatedCostCents: 0,
+  };
+}
+
 type FakeJob = MediaStatus & { estimatedCostCents: number };
 
 export class FakeHiggsfieldProvider implements MediaProvider {
@@ -165,6 +176,9 @@ export class HiggsfieldProvider implements MediaProvider {
     });
     if (!response.ok) {
       const text = await response.text();
+      if (response.status === 402 || /not_enough_credits|insufficient|quota/i.test(text)) {
+        return demoFallback(input.type === "video" ? "video" : "image");
+      }
       throw new Error(`Higgsfield create failed (${response.status}): ${text}`);
     }
     const payload = this.normalize(await response.json());

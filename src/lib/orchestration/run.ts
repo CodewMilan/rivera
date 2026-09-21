@@ -685,20 +685,32 @@ async function generateCampaignMedia(deps: OrchestratorDeps, org: Organization, 
       });
       continue;
     }
-    const created =
-      item.type === "video"
-        ? await deps.media.createVideo({
-            prompt: item.hook,
-            type: "video",
-            costCeilingCents: Math.max(ceiling, 40),
-            webhookUrl: process.env.HIGGSFIELD_WEBHOOK_URL,
-          })
-        : await deps.media.createImage({
-            prompt: item.hook,
-            type: "image",
-            costCeilingCents: Math.max(ceiling, 25),
-            webhookUrl: process.env.HIGGSFIELD_WEBHOOK_URL,
-          });
+    let created;
+    try {
+      created =
+        item.type === "video"
+          ? await deps.media.createVideo({
+              prompt: item.hook,
+              type: "video",
+              costCeilingCents: Math.max(ceiling, 40),
+              webhookUrl: process.env.HIGGSFIELD_WEBHOOK_URL,
+            })
+          : await deps.media.createImage({
+              prompt: item.hook,
+              type: "image",
+              costCeilingCents: Math.max(ceiling, 25),
+              webhookUrl: process.env.HIGGSFIELD_WEBHOOK_URL,
+            });
+    } catch (error) {
+      await appendEvent(deps.store, {
+        organizationId: org.id,
+        runId: run.id,
+        type: "media.job.failed",
+        summary: `Higgsfield ${item.type} failed: ${error instanceof Error ? error.message : "error"}`,
+        payload: { contentItemId: item.id },
+      });
+      continue;
+    }
 
     const job = await deps.store.createMediaJob({
       id: createId(),

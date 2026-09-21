@@ -115,8 +115,24 @@ export function LaunchTab({ ctx }: { ctx: DashCtx }) {
                     {media[0] ? (
                       <MediaPreview asset={media[0]} kind={item.type} />
                     ) : (
-                      <div className="flex min-h-32 items-center rounded-[8px] border border-white/10 px-4 text-sm text-[#928c97]">
-                        {job ? `Media ${job.status}${job.error ? `: ${job.error}` : ""}` : "No media yet"}
+                      <div className="flex min-h-32 flex-col items-start justify-center gap-3 rounded-[8px] border border-white/10 px-4 py-4 text-sm text-[#928c97]">
+                        <p>
+                          {job
+                            ? `Media ${job.status}${job.error ? `: ${job.error}` : ""}`
+                            : item.type === "text"
+                              ? "Text post — no media needed."
+                              : "No media yet."}
+                        </p>
+                        {item.type !== "text" && (!job || job.status === "failed") ? (
+                          <button
+                            type="button"
+                            disabled={busy === `media-${item.id}`}
+                            className={btnGhost}
+                            onClick={() => void act(`/api/content/items/${item.id}/generate-media`, `media-${item.id}`)}
+                          >
+                            {busy === `media-${item.id}` ? "Generating…" : job?.status === "failed" ? "Retry generation" : "Generate media"}
+                          </button>
+                        ) : null}
                       </div>
                     )}
                     <div>
